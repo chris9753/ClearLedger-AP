@@ -34,7 +34,7 @@ function SignIn({ navigation }: Props) {
           <Image style={styles.image} resizeMode="contain" source={require('../../assets/images/card_poster.png')} />
         </View>
         {/*  Warning */}
-        <View style={layout.row}>
+        <View style={[layout.row,layout.warningBox]}>
           <View style={layout.column}>
             <Text style={layout.warning}>
 

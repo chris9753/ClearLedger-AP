@@ -78,7 +78,7 @@ function Profile({theme, navigation}: Props) {
       />
 
       <View style={styles.center}>
-        <Facebook />
+        {/* <Facebook /> */}
       </View>
     </View>
   );

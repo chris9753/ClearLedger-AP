@@ -23,6 +23,7 @@
     "@react-navigation/core": "^5.0.0-alpha.8",
     "@react-navigation/native": "^5.0.0-alpha.7",
     "@react-navigation/stack": "^5.0.0-alpha.15",
+    "@twotalltotems/react-native-otp-input": "1.2.1",
     "@types/react-native-snap-carousel": "3.7.4",
     "dayjs": "^1.8.16",
     "libphonenumber-js": "^1.7.25",

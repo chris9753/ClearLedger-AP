@@ -1,10 +1,11 @@
 import auth, {FirebaseAuthTypes} from '@react-native-firebase/auth';
 import libPhoneNumber, {parsePhoneNumberFromString} from 'libphonenumber-js';
-import React, {Fragment, useRef, useState} from 'react';
+import React, {Fragment, useRef, useState, useEffect} from 'react';
 import {Alert, StyleSheet, View, Text} from 'react-native';
+import OTPInputView from '@twotalltotems/react-native-otp-input'
 import CountryPicker, {
   Country,
-  getAllCountries,
+  getAllCountries
 } from 'react-native-country-picker-modal';
 import {Button, Paragraph, TextInput } from 'react-native-paper';
 import CustomButton from '../components/CustomButton';
@@ -22,7 +23,13 @@ function Phone() {
   const confirmationRef = useRef<ConfirmationRef>(null);
   const [number, setNumber] = useState('+1');
   const [verification, setVerification] = useState('');
-
+  // 
+  useEffect(() => {
+    if (verification.length) {
+      // verifcation filled in
+      handleVerification()
+    } 
+  }, [verification]);
   // @ts-ignore
   const [country, setCountry] = useState<Country>({
     cca2: 'US',
@@ -81,22 +88,59 @@ function Phone() {
 
   return confirmationRef.current ? (
     <Fragment>
-      <TextInput
+        {/* HEADING */}
+        <View style={[layout.row, layout.header]}>
+          <View style={layout.column}>
+            <Text style={layout.heading}>
+              What's your number ?
+            </Text>
+          </View>
+        </View>
+                {/* WORD BOX - GUIDE */}
+                <View style={[layout.row, layout.wordBox]}>
+          <View style={layout.column}>
+            <Text style={layout.info}>
+            If it doesn’t happen automatically, enter
+            </Text>
+            <Text style={layout.info}>
+            the 4 digit code we just sent you to verify 
+            </Text>
+            <Text style={layout.info}>
+            your account
+            </Text>
+            
+          </View>
+        </View>
+      {/* <TextInput
         keyboardType="number-pad"
         mode="outlined"
         label="Verification Code"
         value={verification}
         onChangeText={setVerification}
-      />
+      /> */}
+      <View style={[styles.otpInput]}>
+      <OTPInputView
+    pinCount={6}
+    // code={this.state.code} //You can supply this prop or not. The component will be used as a controlled / uncontrolled component respectively.
+    // onCodeChanged = {code =>  setVerification(code)}
+    autoFocusOnLoad
+    codeInputFieldStyle={styles.underlineStyleBase}
+    codeInputHighlightStyle={styles.underlineStyleHighLighted}
+    onCodeFilled = {(code => {
+        setVerification(code)
+    })}
+/>
+      </View>
+    
 
-      <Button
+      {/* <Button
         style={styles.submit}
         loading={loading}
         disabled={!verification}
         mode="contained"
         onPress={handleVerification}>
         Confirm
-      </Button>
+      </Button> */}
     </Fragment>
   ) : (
     <Fragment>
@@ -104,7 +148,7 @@ function Phone() {
        <View style={[layout.row, layout.header]}>
           <View style={layout.column}>
             <Text style={layout.heading}>
-              What's your number ?
+              Verify your number
             </Text>
           </View>
         </View>
@@ -143,8 +187,8 @@ function Phone() {
         {`${country.name} ( +${country.callingCode} )`}
       </Button>
 
-      <Paragraph style={styles.paragraph}>Enter your phone number:</Paragraph>
-      <View style={[layout.full]}>
+      {/* <Paragraph style={styles.paragraph}>Enter your phone number:</Paragraph> */}
+      <View style={[layout.full,styles.paragraphSpacing]}>
       <TextInput
         style={styles.input}
         keyboardType="number-pad"
@@ -157,19 +201,26 @@ function Phone() {
 
       </View>
    
-      {/* <Button
-        style={styles.submit}
-        loading={loading}
-        disabled={!isValid()}
-        mode="contained"
-        onPress={handlePhoneAuth}>
-        Submit
-      </Button> */}
+      {/*  Warning */}
+      <View style={[layout.row,layout.warningBox]}>
+          <View style={layout.column}>
+            <Text style={layout.warning}>
+
+              By tapping any button below, you agree to our Terms.
+            </Text>
+            <Text style={layout.warning}>
+
+              Learn more about how we process your data in our Privacy Policy.
+            </Text>
+          </View>
+
+        </View>
       <View style={[layout.full,layout.cta]}>
           <CustomButton  
         textColor={'#fff'}
         color={'#F11856'}
         solid={true}
+        disabled={!isValid()}
         loading={loading}
         onPress={() => (loading ? null : handlePhoneAuth())}>
           Submit
@@ -189,6 +240,22 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'red',
     borderRadius: 5,
+  },
+  paragraphSpacing:{
+    marginBottom:25
+  },
+  underlineStyleBase: {
+    width: 30,
+    height: 45,
+    borderWidth: 0,
+    borderBottomWidth: 1,
+  },
+otpInput: {
+  height:60,
+  width:'80%'
+},
+  underlineStyleHighLighted: {
+    borderColor: "#03DAC6",
   },
   input: {
     borderTopColor:'transparent',

@@ -13,13 +13,14 @@ interface Props {
   textColor: string;
   solid: boolean;
   customStyles?: ViewStyle
+  disabled?:boolean
 }
 
 
-function CustomButton({ customStyles, icon, onPress, loading, children, color, solid, textColor }: Props) {
+function CustomButton({ customStyles, icon, onPress, loading, children, color, solid, textColor,disabled }: Props) {
 
   return (
-    <TouchableOpacity style={[styles(color, solid, textColor).button, customStyles]} onPress={onPress}>
+    <TouchableOpacity disabled={disabled} style={[styles(color, solid, textColor).button, customStyles]} onPress={onPress}>
       {!icon ? (
         <View style={stylesdefault.row}>
           <Text style={styles(color, solid, textColor).content}>{children}</Text>

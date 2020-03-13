@@ -8,10 +8,10 @@ export default StyleSheet.create({
   
     },
     cta: {
-      marginTop:10
+      marginTop:25
     },
     row: {
-        backgroundColor:"yellow",
+        backgroundColor:"transparent",
       flexDirection: 'row'
     },
     full: {
@@ -38,6 +38,9 @@ export default StyleSheet.create({
     },
     wordBox: {
         marginVertical:40
+    },
+    warningBox:{
+        marginTop:10
     },
     heading: {
       fontFamily: 'Open Sans',
