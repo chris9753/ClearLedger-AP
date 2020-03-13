@@ -1,11 +1,12 @@
 import React from 'react';
 import {StyleSheet, View, Dimensions} from 'react-native';
 import Phone from '../providers/Phone';
+import layout from './layout';
 
 function PhoneSignIn() {
   return (
-    <View style={styles.container}>
-      <View style={styles.main}>
+    <View style={layout.container}>
+      <View style={layout.main}>
       <Phone />
       </View>
       
@@ -21,10 +22,11 @@ const styles = StyleSheet.create({
 
   },
   main: {
-    alignItems:'center',
+    overflow: 'visible',
+    // backgroundColor: 'blue',
+    alignItems: 'center',
     marginTop: deviceHeight * .09,
-    marginHorizontal: deviceHeight * .14,
-    // marginBottom: deviceHeight * .7
+    marginHorizontal: deviceHeight * .05,
   }
 });
 

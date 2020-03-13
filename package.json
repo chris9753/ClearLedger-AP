@@ -23,6 +23,7 @@
     "@react-navigation/core": "^5.0.0-alpha.8",
     "@react-navigation/native": "^5.0.0-alpha.7",
     "@react-navigation/stack": "^5.0.0-alpha.15",
+    "@types/react-native-snap-carousel": "3.7.4",
     "dayjs": "^1.8.16",
     "libphonenumber-js": "^1.7.25",
     "lottie-ios": "3.1.3",
@@ -30,9 +31,11 @@
     "prop-types": "15.7.2",
     "react": "16.9.0",
     "react-devtools": "4.5.0",
+    "react-magic-slider-dots": "1.1.3",
     "react-native": "0.61.2",
     "react-native-animatable": "1.3.3",
     "react-native-country-picker-modal": "^0.8.0",
+    "react-native-dots-pagination": "0.1.9",
     "react-native-fbsdk": "^1.0.4",
     "react-native-gesture-handler": "^1.4.1",
     "react-native-google-signin": "^2.0.0",
@@ -41,6 +44,8 @@
     "react-native-reanimated": "^1.2.0",
     "react-native-safe-area-context": "0.7.3",
     "react-native-screens": "^2.0.0-alpha.1",
+    "react-native-shadow": "1.2.2",
+    "react-native-snap-carousel": "3.8.4",
     "react-native-vector-icons": "6.6.0"
   },
   "devDependencies": {

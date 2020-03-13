@@ -1,12 +1,14 @@
 import auth, {FirebaseAuthTypes} from '@react-native-firebase/auth';
 import libPhoneNumber, {parsePhoneNumberFromString} from 'libphonenumber-js';
 import React, {Fragment, useRef, useState} from 'react';
-import {Alert, StyleSheet, View} from 'react-native';
+import {Alert, StyleSheet, View, Text} from 'react-native';
 import CountryPicker, {
   Country,
   getAllCountries,
 } from 'react-native-country-picker-modal';
-import {Button, Paragraph, TextInput} from 'react-native-paper';
+import {Button, Paragraph, TextInput } from 'react-native-paper';
+import CustomButton from '../components/CustomButton';
+import layout from '../signed-out/layout';
 
 type ConfirmationRef =
   | ((verificationCode: string) => Promise<FirebaseAuthTypes.User | null>)
@@ -98,6 +100,26 @@ function Phone() {
     </Fragment>
   ) : (
     <Fragment>
+       {/* HEADING */}
+       <View style={[layout.row, layout.header]}>
+          <View style={layout.column}>
+            <Text style={layout.heading}>
+              What's your number ?
+            </Text>
+          </View>
+        </View>
+        {/* WORD BOX - GUIDE */}
+        <View style={[layout.row, layout.wordBox]}>
+          <View style={layout.column}>
+            <Text style={layout.info}>
+            Whether you’re creating an account or 
+            </Text>
+            <Text style={layout.info}>
+            signing back, let’s start with your number.
+            </Text>
+            
+          </View>
+        </View>
       <View style={styles.picker} pointerEvents="none">
         <CountryPicker
           ref={pickerRef}
@@ -122,22 +144,38 @@ function Phone() {
       </Button>
 
       <Paragraph style={styles.paragraph}>Enter your phone number:</Paragraph>
-      {/* <TextInput
+      <View style={[layout.full]}>
+      <TextInput
+        style={styles.input}
         keyboardType="number-pad"
-        mode="outlined"
-        label="Phone Number"
+        mode="flat"
+        // label="Phone Number"
+        selectionColor={'#888888'}
         value={number}
         onChangeText={handleNumber}
-      /> */}
+      />
 
-      <Button
+      </View>
+   
+      {/* <Button
         style={styles.submit}
         loading={loading}
         disabled={!isValid()}
         mode="contained"
         onPress={handlePhoneAuth}>
         Submit
-      </Button>
+      </Button> */}
+      <View style={[layout.full,layout.cta]}>
+          <CustomButton  
+        textColor={'#fff'}
+        color={'#F11856'}
+        solid={true}
+        loading={loading}
+        onPress={() => (loading ? null : handlePhoneAuth())}>
+          Submit
+        </CustomButton>
+      </View>
+
     </Fragment>
   );
 }
@@ -151,6 +189,14 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'red',
     borderRadius: 5,
+  },
+  input: {
+    borderTopColor:'transparent',
+    borderLeftWidth:0,
+    borderRightWidth:0,
+    backgroundColor:'white',
+    borderBottomColor:'#888888',
+    overflow:'hidden'
   },
   phoneCountryCode: {
     marginTop: 5,

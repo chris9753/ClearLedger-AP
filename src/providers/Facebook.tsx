@@ -1,14 +1,16 @@
 import auth from '@react-native-firebase/auth';
 import React, {useContext, useState} from 'react';
-import {Alert} from 'react-native';
+import {Alert,StyleSheet,StyleSheetProperties, ViewStyle} from 'react-native';
 import {AccessToken, LoginManager} from 'react-native-fbsdk';
 import {UserContext} from '../App';
 import ProviderButton from '../components/ProviderButton';
 import {getProviderButtonTitle} from '../util/helpers';
 
 const PROVIDER_ID = 'facebook.com';
-
-function Facebook() {
+interface Props {
+  style?: ViewStyle;
+}
+function Facebook({style}:Props) {
   const [loading, setLoading] = useState(false);
   const user = useContext(UserContext);
 
@@ -66,7 +68,7 @@ function Facebook() {
   }
 
   return (
-    <ProviderButton loading={loading} type="facebook" onPress={handleFacebook}>
+    <ProviderButton style={style} loading={loading} type="facebook" onPress={handleFacebook}>
       {title}
     </ProviderButton>
   );

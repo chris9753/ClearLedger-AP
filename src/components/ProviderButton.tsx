@@ -30,6 +30,7 @@ function ProviderButton({style, type, onPress, loading, children}: Props) {
     return (
     <CustomButton  
     // icon={() => <Icon name={type} color="#fff" size={17} />}
+    customStyles={style}
     textColor={'#9D9D9D'}
     color={getSocialColor(type)}
     solid={false}
