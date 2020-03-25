@@ -3,28 +3,33 @@ import { Image, SafeAreaView, StyleSheet, View, ViewStyle, Platform, StatusBar, 
 import { getStatusBarHeight } from 'react-native-status-bar-height';
 import theme from '../theme';
 import { useCountRenders } from '../util/performance';
-
+import LinearGradient from 'react-native-linear-gradient';
 interface Props {
     items: any[]
+    onComplete: () => void;
+    onSwipeUp: (item:any) => void; 
+    onSwipeLeft: (item:any) => void; 
+    onSwipeRight: (item:any) => void;
+    // placeholder :() => JSX.Element;
 }
 
 const SCREEN_WIDTH = Dimensions.get('screen').width
-function SwipeableCard({ items }: Props) {
+function SwipeableCard({ items, onComplete,onSwipeUp, onSwipeLeft, onSwipeRight }: Props) {
     const [currentIndex, setCurrentIndex] = useState(items.length - 1)
     useCountRenders()
     const position = useRef(new Animated.ValueXY())
-    // Card Released
+   
 
-  
+   // Card Released
     useLayoutEffect(() => {
         if(currentIndex != items.length - 1) {
             console.log("position changing back...",currentIndex)
             position.current.setValue({ x: 0, y: 0 })
         }
-        // setTimeout(()=> {
-        //     console.log("changing index")
-        //     setCurrentIndex(c => c - 1)
-        // },5000)
+        if(currentIndex < 0) {
+            onComplete()
+        }
+    
     },[currentIndex])
 
    
@@ -102,7 +107,7 @@ function SwipeableCard({ items }: Props) {
     return <Fragment> 
         { items.map((item: any, i: number) => {
             if (i > currentIndex) {
-                // NO MORE CARDS IN STACK.
+                // past viewed cards in stack
                 return null;
             } else if (i == currentIndex) {
                 // CURRENT CARD AT TOP OF STACK.
@@ -160,9 +165,11 @@ function SwipeableCard({ items }: Props) {
 
                     {/* LABELS -- END */}
                     {/* MAIN */}
+                    <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.4)' ,'rgba(0,0,0,0.5)']} style={styles.info}></LinearGradient>
                     <Image
                         style={styles.image}
                         source={{ uri: item.image }}
+
                     />
 
                 </Animated.View>
@@ -189,6 +196,18 @@ function SwipeableCard({ items }: Props) {
 
 
 const styles = StyleSheet.create({
+    info: {
+        flex:1,
+        zIndex:9999,
+        position:'absolute',
+        bottom:0,
+        left:10,
+        right:10,
+        flexDirection:'row',
+        height:200,
+        width:'100%',
+        borderRadius:20,
+    },
     stage: {
         width: '100%',
         // backgroundColor:'white',
