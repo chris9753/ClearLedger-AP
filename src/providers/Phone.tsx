@@ -92,7 +92,7 @@ function Phone() {
         <View style={[layout.row, layout.header]}>
           <View style={layout.column}>
             <Text style={layout.heading}>
-              What's your number ?
+              Verify your number
             </Text>
           </View>
         </View>
@@ -148,7 +148,7 @@ function Phone() {
        <View style={[layout.row, layout.header]}>
           <View style={layout.column}>
             <Text style={layout.heading}>
-              Verify your number
+              What's your number?
             </Text>
           </View>
         </View>

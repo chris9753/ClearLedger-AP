@@ -1,7 +1,6 @@
 import React, { Fragment } from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createStackNavigator} from '@react-navigation/stack';
-import CreateAccount from './CreateAccount';
 import ForgotPassword from './ForgotPassword';
 import PhoneSignIn from './PhoneSignIn';
 import SignIn from './SignIn';

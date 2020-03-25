@@ -1,45 +1,44 @@
 import React from 'react';
-import {Image, SafeAreaView, StyleSheet, View, ViewStyle} from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
+import {Image, SafeAreaView, StyleSheet, View, ViewStyle, Platform, StatusBar} from 'react-native';
+import { getStatusBarHeight } from 'react-native-status-bar-height';
 
 interface Props {
   children?: React.ReactNode | React.ReactNode[];
-  height: number;
   colors: string[];
   image?: string;
   style?: ViewStyle;
 }
 
-function Hero({image, colors, height, children, style}: Props) {
+function InAppHeader({colors,style,children}: Props) {
   return (
-    <View style={[style, {height}]}>
-      {!!image && (
-        <Image
-          style={[styles.absolute, styles.image]}
-          source={{
-            uri: image,
-          }}
-        />
-      )}
-      <LinearGradient colors={colors} style={styles.absolute} />
-      <SafeAreaView style={styles.absolute}>{children}</SafeAreaView>
+    <View style={[style]}>
+      
+      <SafeAreaView style={styles.AndroidSafeArea}>
+        <View style={styles.content}>
+
+        {children}
+        </View>
+
+          
+        
+      </SafeAreaView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  absolute: {
-    flex: 1,
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
+  content : {
+    // backgroundColor:'purple',
+    marginHorizontal:25,
+    flexDirection:'row',
+    justifyContent:'space-between',
   },
-  image: {
-    width: '100%',
-    height: '100%',
+  AndroidSafeArea: {
+    flex: 0,
+    backgroundColor: "transparent",
+    marginTop: getStatusBarHeight() + 10
   },
+
 });
 
-export default Hero;
+export default InAppHeader;
