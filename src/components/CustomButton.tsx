@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 
-
+import LottieView from 'lottie-react-native';
 
 interface Props {
   icon?: () => JSX.Element
@@ -23,7 +23,15 @@ function CustomButton({ customStyles, icon, onPress, loading, children, color, s
     <TouchableOpacity disabled={disabled} style={[styles(color, solid, textColor).button, customStyles]} onPress={onPress}>
       {!icon ? (
         <View style={stylesdefault.row}>
-          <Text style={styles(color, solid, textColor).content}>{children}</Text>
+          <Text style={[styles(color, solid, textColor).content,{marginRight:8}]}>{children}</Text>
+          {loading &&
+           <LottieView
+           autoPlay 
+           loop
+           style={{alignContent:'center',position:'relative',height:20,width:20}}
+            source={require('../animations/loadingspinner.json')}
+          />
+          }
         </View>
 
       ) : (
@@ -40,6 +48,7 @@ function CustomButton({ customStyles, icon, onPress, loading, children, color, s
 const stylesdefault = StyleSheet.create({
   row: {
     flexDirection: 'row',
+    alignItems:'center'
   },
   withIcon: {
     marginLeft: 10
@@ -58,7 +67,7 @@ const styles = (color: string, solid: boolean, textColor: string) => {
       borderColor: color,
       backgroundColor: color,
       borderRadius: 150,
-      marginHorizontal:20,
+      // marginHorizontal:20,
       overflow:'visible'
     },
     content: {

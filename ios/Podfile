@@ -1,6 +1,6 @@
-platform :ios, '9.0'
+platform :ios, '10.0'
 require_relative '../node_modules/@react-native-community/cli-platform-ios/native_modules'
-
+require_relative '../node_modules/react-native-unimodules/cocoapods.rb'
 target 'Wander' do
   # Pods for Wander
   pod 'FBLazyVector', :path => "../node_modules/react-native/Libraries/FBLazyVector"
@@ -43,11 +43,16 @@ target 'Wander' do
   # https://firebase.google.com/docs/ios/setup#available-pods
   pod 'RNVectorIcons', :path => '../node_modules/react-native-vector-icons'
 
+  pod 'lottie-react-native', :path => '../node_modules/lottie-react-native'
+  pod 'lottie-ios', '~> 3.1.3'
+  pod 'AKPickerView', :git => 'https://github.com/prscX/AKPickerView.git'
+  pod 'RNNumberSelector', :path => '../node_modules/react-native-number-selector/ios'
   target 'WanderTests' do
     inherit! :search_paths
     # Pods for testing
   end
     use_native_modules!
+    use_unimodules!
   # use_native_modules!
 end
 

@@ -1,7 +1,8 @@
 <resources>
     <string name="app_name">Wander</string>
-    <string name="facebook_app_id">changeme</string>
-    <string name="fb_login_protocol_scheme"></string>
+    <string name="facebook_app_id">2590257064630507</string>
+    <string name="fb_login_protocol_scheme">fb2590257064630507</string>
+
     <!-- [android] facebook_app_id -->
     <!-- [android] fb_login_protocol_scheme -->
 </resources>

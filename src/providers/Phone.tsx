@@ -10,7 +10,7 @@ import CountryPicker, {
 import {Button, Paragraph, TextInput } from 'react-native-paper';
 import CustomButton from '../components/CustomButton';
 import layout from '../signed-out/layout';
-
+import  { AuthCredential } from '../contexts/auth'
 type ConfirmationRef =
   | ((verificationCode: string) => Promise<FirebaseAuthTypes.User | null>)
   | null;
@@ -19,7 +19,9 @@ const countryKeys = getAllCountries().map(country => country.cca2);
 
 function Phone() {
   const [loading, setLoading] = useState(false);
+  const [authCredential,setAuthCredential] = AuthCredential.useData()
   const pickerRef = useRef<CountryPicker>(null);
+  const verificationId = useRef<string|null>('')
   const confirmationRef = useRef<ConfirmationRef>(null);
   const [number, setNumber] = useState('+1');
   const [verification, setVerification] = useState('');
@@ -42,6 +44,7 @@ function Phone() {
       setLoading(true);
       try {
         const result = await auth().signInWithPhoneNumber(number);
+        verificationId.current = result.verificationId
         confirmationRef.current = result.confirm.bind(result);
       } catch (error) {
         confirmationRef.current = null;
@@ -76,7 +79,17 @@ function Phone() {
     if (!loading && confirmationRef.current) {
       setLoading(true);
       try {
+
+         // Persist Phone Auth Credential for reauthentication when completing third party linking
+        //see error code 'auth/requires-recent-authentication' for more information on the necessity of this step
+        const credential = auth.PhoneAuthProvider.credential(verificationId.current,verification)
+        
+
         await confirmationRef.current(verification);
+        
+        //all gucci persist phoneAuthCredential
+       await setAuthCredential(credential)
+       
         confirmationRef.current = null;
       } catch (error) {
         Alert.alert('Phone Verification Error', error.message);
@@ -133,14 +146,6 @@ function Phone() {
       </View>
     
 
-      {/* <Button
-        style={styles.submit}
-        loading={loading}
-        disabled={!verification}
-        mode="contained"
-        onPress={handleVerification}>
-        Confirm
-      </Button> */}
     </Fragment>
   ) : (
     <Fragment>
@@ -187,7 +192,7 @@ function Phone() {
         {`${country.name} ( +${country.callingCode} )`}
       </Button>
 
-      {/* <Paragraph style={styles.paragraph}>Enter your phone number:</Paragraph> */}
+
       <View style={[layout.full,styles.paragraphSpacing]}>
       <TextInput
         style={styles.input}

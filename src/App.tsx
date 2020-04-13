@@ -1,5 +1,5 @@
 import React from 'react';
-import {Text} from 'react-native';
+import {Text, StatusBar} from 'react-native';
 import {createContext, ReactNode, useEffect, useState} from 'react';
 import auth, {FirebaseAuthTypes} from '@react-native-firebase/auth';
 import {Provider} from 'react-native-paper';
@@ -13,7 +13,7 @@ import Splash from './SplashScreen';
 /**
  * Types
  */
-type User = FirebaseAuthTypes.User | null;
+export type User = FirebaseAuthTypes.User | null;
 
 /**
  * Context
@@ -31,17 +31,17 @@ function App() {
       setUser(result);
       if (initializing && !listenUser) {
         //2 second animation
-       await wait(4500)
+        await wait(4500)
         setInitializing(false);
         setListenUser(true);
       }
     });
-
     return () => {
       if (authListener) {
         authListener();
       }
     };
+   
   }, [initializing, listenUser]);
 
   /** Listen for user changes */

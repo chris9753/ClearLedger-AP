@@ -26,6 +26,7 @@
 		6BCD8236BBBA4A0DAB0AFA5D /* OpenSans-BoldItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = BE56FACE234C4E5BAFACADBF /* OpenSans-BoldItalic.ttf */; };
 		72E6369085A941E698F4A332 /* OpenSans-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 04FD27294A8645A98269C33C /* OpenSans-Bold.ttf */; };
 		773AA91E240DBBC80096F724 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 773AA91D240DBBC80096F724 /* GoogleService-Info.plist */; };
+		779A5848242E8C8600E4FD85 /* File.swift in Sources */ = {isa = PBXBuildFile; fileRef = 779A5847242E8C8600E4FD85 /* File.swift */; };
 		A9BE09E511640BE93E07C253 /* libPods-Wander-tvOSTests.a in Frameworks */ = {isa = PBXBuildFile; fileRef = BB06F5F555C7AB67E66FF748 /* libPods-Wander-tvOSTests.a */; };
 		AA01C876777447B5975544CC /* OpenSans-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 12E5BC791E214C3F8B3026D9 /* OpenSans-Light.ttf */; };
 		AAB7E656E83F623BDA1A1B8F /* libPods-Wander.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A42515560344B0899DFC54A /* libPods-Wander.a */; };
@@ -84,6 +85,8 @@
 		5096E9200CDC40C4ADDA1D9F /* Feather.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Feather.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Feather.ttf"; sourceTree = "<group>"; };
 		7017773E71EF4330B3E89D6D /* SimpleLineIcons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = SimpleLineIcons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/SimpleLineIcons.ttf"; sourceTree = "<group>"; };
 		773AA91D240DBBC80096F724 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		779A5846242E8C8500E4FD85 /* Wander-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Wander-Bridging-Header.h"; sourceTree = "<group>"; };
+		779A5847242E8C8600E4FD85 /* File.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = File.swift; sourceTree = "<group>"; };
 		927DD143432446EB83A2DB52 /* FontAwesome5_Brands.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome5_Brands.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome5_Brands.ttf"; sourceTree = "<group>"; };
 		94FE7C01DC8544F9BB92DC08 /* AntDesign.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = AntDesign.ttf; path = "../node_modules/react-native-vector-icons/Fonts/AntDesign.ttf"; sourceTree = "<group>"; };
 		98F017021A7C2164C160665D /* Pods-Wander-tvOSTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Wander-tvOSTests.debug.xcconfig"; path = "Target Support Files/Pods-Wander-tvOSTests/Pods-Wander-tvOSTests.debug.xcconfig"; sourceTree = "<group>"; };
@@ -174,6 +177,8 @@
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				13B07FB11A68108700A75B9A /* LaunchScreen.xib */,
 				13B07FB71A68108700A75B9A /* main.m */,
+				779A5847242E8C8600E4FD85 /* File.swift */,
+				779A5846242E8C8500E4FD85 /* Wander-Bridging-Header.h */,
 			);
 			name = Wander;
 			sourceTree = "<group>";
@@ -370,6 +375,9 @@
 					00E356ED1AD99517003FC87E = {
 						CreatedOnToolsVersion = 6.2;
 						TestTargetID = 13B07F861A680F5B00A75B9A;
+					};
+					13B07F861A680F5B00A75B9A = {
+						LastSwiftMigration = 1130;
 					};
 					2D02E47A1E0B4A5D006451C7 = {
 						CreatedOnToolsVersion = 8.2.1;
@@ -685,6 +693,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				13B07FBC1A68108700A75B9A /* AppDelegate.m in Sources */,
+				779A5848242E8C8600E4FD85 /* File.swift in Sources */,
 				13B07FC11A68108700A75B9A /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -738,6 +747,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = E52B7DAF65032E2F60C54737 /* Pods-WanderTests.debug.xcconfig */;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
@@ -761,6 +771,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = E3B0B8EF4635885C52B3022E /* Pods-WanderTests.release.xcconfig */;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COPY_PHASE_STRIP = NO;
 				INFOPLIST_FILE = WanderTests/Info.plist;
@@ -782,6 +793,7 @@
 			baseConfigurationReference = B5B94C1256655724B1D25199 /* Pods-Wander.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = NO;
 				INFOPLIST_FILE = Wander/Info.plist;
@@ -793,6 +805,9 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.venndii.wander;
 				PRODUCT_NAME = Wander;
+				SWIFT_OBJC_BRIDGING_HEADER = "Wander-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
@@ -802,6 +817,7 @@
 			baseConfigurationReference = 0C3E34AE015C0BD4FE5F49AC /* Pods-Wander.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = Wander/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
@@ -812,6 +828,8 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.venndii.wander;
 				PRODUCT_NAME = Wander;
+				SWIFT_OBJC_BRIDGING_HEADER = "Wander-Bridging-Header.h";
+				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;

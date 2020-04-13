@@ -1,5 +1,5 @@
 import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import React, { useContext } from 'react';
 import { Theme, withTheme } from 'react-native-paper';
 import Wander from './main/Wander';
@@ -8,84 +8,38 @@ import { UserContext } from '../App';
 import theme from '../theme';
 import CompleteAccountCreation from './intro/CompleteAccountCreation';
 import PublicProfile from './main/PublicProfile';
-import { Animated } from 'react-native';
 import Profile from './main/Profile';
+import User from '../entities/users/model'
+import {ProfileComplete} from '../contexts/profile'
+import { forFade } from '../animations/stack';
+// Before rendering any navigation stack
+import { enableScreens } from 'react-native-screens';
+import { TransitionSpec } from '@react-navigation/stack/lib/typescript/src/types';
+enableScreens();
 interface Props {
   theme: Theme;
 }
-const { add, multiply } = Animated;
-function conditional(
-  condition: Animated.AnimatedInterpolation,
-  main: Animated.AnimatedInterpolation,
-  fallback: Animated.AnimatedInterpolation
-) {
-  // To implement this behavior, we multiply the main node with the condition.
-  // So if condition is 0, result will be 0, and if condition is 1, result will be main node.
-  // Then we multiple reverse of the condition (0 if condition is 1) with the fallback.
-  // So if condition is 0, result will be fallback node, and if condition is 1, result will be 0,
-  // This way, one of them will always be 0, and other one will be the value we need.
-  // In the end we add them both together, 0 + value we need = value we need
-  return add(
-    multiply(condition, main),
-    multiply(
-      condition.interpolate({
-        inputRange: [0, 1],
-        outputRange: [1, 0],
-      }),
-      fallback
-    )
-  );
-    }
-const forFade =  ({closing, current, index, insets, inverted, next, layouts, swiping}:any) => {
- 
-  const progress = add(
-    current.progress.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0, 1],
-      extrapolate: 'clamp',
-    }),
-    next
-      ? next.progress.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0, 1],
-          extrapolate: 'clamp',
-        })
-      : 0
-  );
 
-  const opacity = progress.interpolate({
-    inputRange: [0, 0.8, 1, 1.2, 2],
-    outputRange: [0, 0.5, 1, 0.33, 0],
-  });
-
-  const scale = conditional(
-    closing,
-    current.progress.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0.9, 1],
-      extrapolate: 'clamp',
-    }),
-    progress.interpolate({
-      inputRange: [0, 1, 2],
-      outputRange: [0.85, 1, 1.1],
-    })
-  );
-
-  return {
-    containerStyle: {
-      opacity,
-      transform: [{ scale }],
-    },
-  }
-}
 const Stack = createStackNavigator();
 function SignedInStack() {
   const user = useContext(UserContext);
-
+  const config = {
+    animation: 'spring',
+    config: {
+      stiffness: 1000,
+      damping: 500,
+      mass: 3,
+      overshootClamping: true,
+      restDisplacementThreshold: 0.01,
+      restSpeedThreshold: 0.01,
+      useNativeDriver:true
+    }
+  } as TransitionSpec
+  const [profileCompleted, _] = ProfileComplete.useData()
   function main() {
     return <NavigationContainer>
       <Stack.Navigator
-
+      
         screenOptions={{
           headerShown: false,
           headerStyle: {
@@ -104,6 +58,13 @@ function SignedInStack() {
           <Stack.Screen
           name="Profile"
           component={Profile}
+          options={{
+            transitionSpec: {
+              open: config,
+              close: config,
+            },
+            animationEnabled:true
+          }}
   
         />
            <Stack.Screen
@@ -141,7 +102,7 @@ function SignedInStack() {
   </NavigationContainer>
   }
 
-  return !user?.email ? main() : intro()
+  return User()?.isUserComplete() && !profileCompleted ? intro() :  main()
 }
 
 export default SignedInStack

@@ -1,70 +1,90 @@
-import React, { Fragment, useMemo, useRef, useState, useEffect, useLayoutEffect, useReducer } from 'react';
+import React, { Fragment, useMemo, useRef, useState, useEffect, useLayoutEffect, useReducer, ForwardRefExoticComponent, RefAttributes, useCallback } from 'react';
 import { Image, SafeAreaView, StyleSheet, View, ViewStyle, Platform, StatusBar, Animated, PanResponder, Dimensions, Text, UIManager, LayoutAnimation } from 'react-native';
 import { getStatusBarHeight } from 'react-native-status-bar-height';
 import theme from '../theme';
 import { useCountRenders } from '../util/performance';
 import LinearGradient from 'react-native-linear-gradient';
+import { TouchableWithoutFeedback } from 'react-native-gesture-handler';
+import ImageGallery from './ImageGallery';
+
+export type Handle<T> = T extends ForwardRefExoticComponent<RefAttributes<infer T2>> ? T2 : never;
 interface Props {
     items: any[]
     onComplete: () => void;
-    onSwipeUp: (item:any) => void; 
-    onSwipeLeft: (item:any) => void; 
-    onSwipeRight: (item:any) => void;
+    onSwipeUp: (item: any) => void;
+    onSwipeLeft: (item: any) => void;
+    onSwipeRight: (item: any) => void;
     // placeholder :() => JSX.Element;
 }
 
 const SCREEN_WIDTH = Dimensions.get('screen').width
-function SwipeableCard({ items, onComplete,onSwipeUp, onSwipeLeft, onSwipeRight }: Props) {
+function SwipeableCard({ items, onComplete, onSwipeUp, onSwipeLeft, onSwipeRight }: Props) {
     const [currentIndex, setCurrentIndex] = useState(items.length - 1)
-    useCountRenders()
+    useCountRenders("swipeable")
     const position = useRef(new Animated.ValueXY())
-   
+    const deltaY = useRef(new Animated.Value(1)).current
+    const tappableImageGalleryRef = useRef(null)
 
-   // Card Released
-    useEffect(() => {
-        if(currentIndex != items.length - 1) {
-            console.log("position changing back...",currentIndex)
-            position.current.setValue({ x: 0, y: 0 })
+    useLayoutEffect(() => {
+        // UIManager.setLayoutAnimationEnabledExperimental && UIManager.setLayoutAnimationEnabledExperimental(true);
+        // LayoutAnimation.linear()
+    }, [])
+    // Card Released
+    useLayoutEffect(() => {
+
+
+        if (currentIndex != items.length - 1) {
+            console.log("position changing back...", currentIndex)
+            
         }
-        if(currentIndex < 0) {
+        if (currentIndex < 0) {
+
             onComplete()
         }
-    
-    },[currentIndex])
 
-   
-   const onSwipeComplete = () => {
-       console.log("swipe complete")
-    UIManager.setLayoutAnimationEnabledExperimental && UIManager.setLayoutAnimationEnabledExperimental(true);
-    LayoutAnimation.spring();
-    setCurrentIndex(currentIndex - 1)
-   }
+    }, [currentIndex])
+
+    // new items came in
+    useEffect(() => {
+
+        setCurrentIndex(items.length - 1)
+    }, [items])
+
+
+    const onSwipeComplete = () => {
+
+        console.log("swipe complete")
+
+        position.current.setValue({ x: 0, y: 0 })
+        setCurrentIndex(currentIndex - 1)
+
+    }
     // ANIMATION DEFINTIONS
     const rotate = useRef(position.current.x.interpolate({
         inputRange: [-SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2],
         outputRange: ['-10deg', '0deg', '10deg'],
         extrapolate: 'clamp'
     }))
-   const likeOpacity = useRef(position.current.x.interpolate({
+    const likeOpacity = useRef(position.current.x.interpolate({
         inputRange: [-SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2],
         outputRange: [0, 0, 1],
         extrapolate: 'clamp'
-     }))
-     const nopeOpacity = useRef(position.current.x.interpolate({
+    }))
+    const nopeOpacity = useRef(position.current.x.interpolate({
         inputRange: [-SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2],
         outputRange: [1, 0, 0],
         extrapolate: 'clamp'
-     }))
-     const nextCardOpacity = useRef(position.current.x.interpolate({
+    }))
+    const nextCardOpacity = useRef(position.current.x.interpolate({
         inputRange: [-SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2],
         outputRange: [1, 0, 1],
         extrapolate: 'clamp'
-     }))
-     const nextCardScale = useRef(position.current.x.interpolate({
+    }))
+    const nextCardScale = useRef(position.current.x.interpolate({
         inputRange: [-SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2],
-        outputRange: [1, 0.8, 1],
+        outputRange: [1, 0.97, 1],
         extrapolate: 'clamp'
-     }))
+    }))
     const rotateAndTranslate = useRef({
         transform: [{
             rotate: rotate.current
@@ -72,43 +92,83 @@ function SwipeableCard({ items, onComplete,onSwipeUp, onSwipeLeft, onSwipeRight 
         ...position.current.getTranslateTransform()
         ]
     })
-    const panResponder = useMemo( () => PanResponder.create({
-        onStartShouldSetPanResponder: (evt: any, gestureState: any) => true,
+    
+    const touchThreshold = 10;
+    // const cachedImageGallery = useCallback((item)=>{
+    //     console.log("recomputed",item.id)
+    //     return <ImageGallery ref={tappableImageGalleryRef} images={item.images} />
+    // },[])
+    const panResponder = useMemo(() => PanResponder.create({
+        onStartShouldSetPanResponder : () => false,
+        onMoveShouldSetPanResponder : (e, gestureState) => {
+            const {dx, dy} = gestureState;
+    
+            return (Math.abs(dx) > touchThreshold) || (Math.abs(dy) > touchThreshold);
+        },
         onPanResponderMove: (evt, gestureState) => {
             position.current.setValue({ x: gestureState.dx, y: gestureState.dy });
-            if (gestureState.dy < -300) {
+            if (gestureState.dy < -100) {
                 onSwipeUp(items[currentIndex])
-          } 
+            }
+            if (Math.abs(gestureState.dx) > touchThreshold || Math.abs(gestureState.dy) > touchThreshold) {
+                const ImageGalleryRef = tappableImageGalleryRef.current as any | null
+                if (ImageGalleryRef) {
+                    ImageGalleryRef.parentGesture.current = true;
+                }
+                //   moveInProgress.current = true;
+            } else {
+                const ImageGalleryRef = tappableImageGalleryRef.current as any | null
+                if (ImageGalleryRef) {
+                    ImageGalleryRef.parentGesture.current = false;
+                }
+                //   moveInProgress.current = false;
+            }
         },
         onPanResponderRelease: (evt, gestureState) => {
-            if (gestureState.dx > 120) {
-                  
-              
-                Animated.spring(position.current, {
-                  toValue: { x: SCREEN_WIDTH + 100, y: gestureState.dy},
-                  restSpeedThreshold: 1000, restDisplacementThreshold: 40
-                }).start(onSwipeComplete)
-                
-              } else if (gestureState.dx < -120) {
+           
+                const ImageGalleryRef = tappableImageGalleryRef.current as any | null
+                if (ImageGalleryRef) {
+                    ImageGalleryRef.parentGesture.current = false;
+                }
             
-              
-                Animated.spring(position.current, {
-                  toValue: { x: -SCREEN_WIDTH - 100, y: gestureState.dy },
-                  restSpeedThreshold: 1000, restDisplacementThreshold: 40
+
+            if (gestureState.dx > 120) {
+
+
+                Animated.timing(position.current, {
+                    useNativeDriver: true,
+                    toValue: { x: SCREEN_WIDTH + 100, y: gestureState.dy },
+                    // restSpeedThreshold: 1000, 
+                    duration:25,
+                    easing:(e) => 10
+                    // restDisplacementThreshold: 40
                 }).start(onSwipeComplete)
 
-              } else {
-                Animated.spring(position.current, {
-                    toValue: { x: 0, y: 0 },
-                    friction: 4
-                    }).start()
-             
-              }
-        }
-    }),[currentIndex])
+            } else if (gestureState.dx < -120) {
 
-    return <Fragment> 
-        { items.map((item: any, i: number) => {
+
+                Animated.timing(position.current, {
+                    useNativeDriver: true,
+                    toValue: { x: -SCREEN_WIDTH - 100, y: gestureState.dy },
+                    // restSpeedThreshold: 1000, restDisplacementThreshold: 40
+                    duration:25,
+                    easing:(e) => 10
+                }).start(onSwipeComplete)
+
+            } else {
+                Animated.spring(position.current, {
+                    useNativeDriver: true,
+                    toValue: { x: 0, y: 0 },
+                    friction: 10
+                }).start()
+
+            }
+        }
+    }), [currentIndex])
+    
+
+    return <Fragment>
+        {items.map((item: any, i: number) => {
             if (i > currentIndex) {
                 // past viewed cards in stack
                 return null;
@@ -116,126 +176,179 @@ function SwipeableCard({ items, onComplete,onSwipeUp, onSwipeLeft, onSwipeRight 
                 // CURRENT CARD AT TOP OF STACK.
                 return <Animated.View
                     {...panResponder.panHandlers}
-                    key={i}
-                    style={[styles.stage, rotateAndTranslate.current, { top:5}]}>
-                    {/* LABELS */}
-                    <Animated.View
-                        style={{
-                            opacity:likeOpacity.current,
-                            transform: [{ rotate: "-30deg" }],
-                            position: "absolute",
-                            top: 50,
-                            left: 40,
-                            zIndex: 1000
-                        }}
-                    >
-                        <Text
+                    key={item.id}
+                    style={[styles.stage, rotateAndTranslate.current]}>
+                    {/* Tappable Gallery Controls */}
+                    <View shouldRasterizeIOS style={[styles.stage, {
+                        shadowColor: "black",
+                        backgroundColor: 'white',
+
+                        shadowOpacity: 0.10,
+                        shadowRadius: 4,
+
+                        elevation: 1,
+                        shadowOffset: {
+                            height: 10,
+                            width: 0
+                        }
+                    }]}>
+
+
+
+
+
+
+
+
+
+                        {/* LABELS */}
+                        <Animated.View
                             style={{
-                                // borderWidth: 1,
-                                // borderColor: "green",
-                                color: theme.colors.light.primary,
-                                fontFamily:'Montserrat',
-                                fontSize: 32,
-                                fontWeight: "800",
-                                padding: 10
+                                opacity: likeOpacity.current,
+                                transform: [{ rotate: "-30deg" }],
+                                position: "absolute",
+                                top: 50,
+                                left: 40,
+                                zIndex: 1000
                             }}
                         >
-                            LIKE
+                            <Text
+                                style={{
+                                    // borderWidth: 1,
+                                    // borderColor: "green",
+                                    color: theme.colors.light.primary,
+                                    fontFamily: 'Montserrat',
+                                    fontSize: 32,
+                                    fontWeight: "800",
+                                    padding: 10
+                                }}
+                            >
+                                LIKE
                              </Text>
-                    </Animated.View>
-                    <Animated.View
-                        style={{
-                            opacity:nopeOpacity.current,
-                            transform: [{ rotate: "30deg" }],
-                            position: "absolute",
-                            top: 50,
-                            right: 40,
-                            zIndex: 1000
-                        }}
-                    >
-                        <Text
+                        </Animated.View>
+                        <Animated.View
                             style={{
-                                fontFamily:'Montserrat',
-                                color: theme.colors.light.secondary,
-                                fontSize: 32,
-                                fontWeight: "800",
-                                padding: 10
+                                opacity: nopeOpacity.current,
+                                transform: [{ rotate: "30deg" }],
+                                position: "absolute",
+                                top: 50,
+                                right: 40,
+                                zIndex: 1000
                             }}
                         >
-                            NOPE
+                            <Text
+                                style={{
+                                    fontFamily: 'Montserrat',
+                                    color: theme.colors.light.secondary,
+                                    fontSize: 32,
+                                    fontWeight: "800",
+                                    padding: 10
+                                }}
+                            >
+                                NOPE
                             </Text>
-                    </Animated.View>
+                        </Animated.View>
 
-                    {/* LABELS -- END */}
-                    {/* MAIN */}
-                    <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.4)' ,'rgba(0,0,0,0.5)']} style={styles.info}>
-                        <Text style={styles.infoText}>{item.name}, {item.age}</Text>
-                    </LinearGradient>
-                    <Image
-                        style={styles.image}
-                        source={{ uri: item.image }}
+                        {/* LABELS -- END */}
+                        {/* MAIN */}
+                        <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.5)']} style={styles.info}>
+                            <Text style={styles.infoText}>{item.name}, {item.age}</Text>
+                        </LinearGradient>
 
-                    />
-
+                        <ImageGallery key={item.id} ref={tappableImageGalleryRef} images={item.images} id={item.id} />
+                        {/* {cachedImageGallery(item)} */}
+                    </View>
                 </Animated.View>
-            } else {
+            } else if ((i == (currentIndex - 1))) {
                 // NEXT CARD IN STACK
                 return <Animated.View
-                    key={i}
-                    style={[styles.stage,{
-                        opacity: nextCardOpacity.current,
-                         top: 1.5 * (currentIndex + i),
-                        transform: [{ scale: nextCardScale.current }]}
-                        
-                        ]}>
+                    key={item.id}
+                    style={[styles.stage, {
+                        // opacity: nextCardOpacity.current,
+                        //  top: 1.1 * (currentIndex + i),
+                        transform: [{ scale: nextCardScale.current }]
+                    },
+                    { shadowColor: 'transparent' }
 
-                    <Image
-                        style={styles.image}
-                        source={{ uri: item.image }}
-                    />
+                    ]}>
+                    <View shouldRasterizeIOS style={[styles.stage, {
+                        shadowColor: "black",
+                        backgroundColor: 'white',
+
+                        shadowOpacity: 0.10,
+                        shadowRadius: 4,
+
+                        elevation: 1,
+                        shadowOffset: {
+                            height: 10,
+                            width: 0
+                        }
+                    }]}>
+
+
+                        <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.5)']} style={styles.info}>
+                            <Text style={styles.infoText}>{item.name}, {item.age}</Text>
+                        </LinearGradient>
+                        <ImageGallery key={item.id} ref={tappableImageGalleryRef} images={item.images} id={item.id} />
+                        {/* {cachedImageGallery(item)} */}
+           
+                    </View>
                 </Animated.View>
+            } else {
+                return null
             }
         })}
-        </Fragment>
+    </Fragment>
 }
 
 
 const styles = StyleSheet.create({
     info: {
-        flex:1,
-        zIndex:9999,
-        position:'absolute',
-        bottom:0,
-        left:10,
-        right:10,
-        flexDirection:'row',
-        height:200,
-        width:'100%',
-        paddingTop:20,
-        paddingHorizontal:20,
-        borderRadius:20,
+        flex: 1,
+        zIndex: 1,
+        position: 'absolute',
+        bottom: 0,
+        flexDirection: 'row',
+        height: 200,
+        width: '100%',
+        paddingTop: 30,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+
+
+
+
+        // marginTop
     },
     infoText: {
-        color:'white',
-        fontFamily:'Open Sans',
-        fontSize:32
+        color: 'white',
+        fontFamily: 'Open Sans',
+        fontSize: 32
     },
     stage: {
         width: '100%',
-        // backgroundColor:'white',
+        // backgroundColor:'blue',
         height: '100%',
-        paddingHorizontal: 10,
+        // flexDirection:'row',
+        alignItems: 'center',
+        borderRadius: 8,
+        // overflow:'hidden',
+        // paddingHorizontal: 10,
         position: 'absolute',
-        top:0
+        // borderWidth:1,
+        // borderColor:'black',
+        // borderStyle:'solid'
+
     },
     image: {
         flex: 1,
-        // alignSelf:'stretch',
+        alignSelf: 'stretch',
         height: undefined,
         width: undefined,
-        borderRadius: 20,
+        borderRadius: 8,
+        // overflow:'hidden',
         resizeMode: 'cover'
     }
 })
 
-export default  SwipeableCard;
+export default SwipeableCard;

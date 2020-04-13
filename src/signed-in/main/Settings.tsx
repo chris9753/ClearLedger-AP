@@ -14,7 +14,6 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 function EditProfile() {
   const user = auth().currentUser;
-
   const [error, setError] = useState('');
   const [signingOut, setSigningOut] = useState(false);
   const [savingName, setSavingName] = useState(false);

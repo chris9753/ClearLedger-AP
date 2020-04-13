@@ -4,25 +4,33 @@ import { getStatusBarHeight } from 'react-native-status-bar-height';
 
 interface Props {
   children?: React.ReactNode | React.ReactNode[];
-  colors: string[];
+  colors?: string[];
   image?: string;
   style?: ViewStyle;
+  centered?:boolean;
 }
 
-function InAppHeader({colors,style,children}: Props) {
+function InAppHeader({colors,style,children,centered}: Props) {
   return (
-    <View style={[style]}>
+    // <View style={[style]}>
       
       <SafeAreaView style={styles.AndroidSafeArea}>
-        <View style={styles.content}>
+       {!centered ?
+      <View style={styles.content}>
 
-        {children}
-        </View>
+      {children}
+      </View>
+      : 
+      <View style={styles.contentCentered}>
+
+      {children}
+      </View>
+      } 
 
           
         
       </SafeAreaView>
-    </View>
+    // </View>
   );
 }
 
@@ -32,11 +40,31 @@ const styles = StyleSheet.create({
     marginHorizontal:25,
     flexDirection:'row',
     justifyContent:'space-between',
+    // alignItems:'center',
+    // alignContent:'center',
+ 
+  },
+  contentCentered: {
+    flexDirection:'row',
+    justifyContent:'center'
   },
   AndroidSafeArea: {
     flex: 0,
+    zIndex:99999,
+    height:Platform.OS === 'ios' ? 100 : 50,
     backgroundColor: "transparent",
-    marginTop: getStatusBarHeight() + 10
+    justifyContent:'center',
+    shadowColor: "transparent",
+    overflow:'visible',
+shadowOffset: {
+	width: 0,
+	height: 1,
+},
+shadowOpacity: 0.18,
+shadowRadius: 2.00,
+
+elevation: 1,
+    marginTop: Platform.OS === 'ios' ? 0 : 0
   },
 
 });
