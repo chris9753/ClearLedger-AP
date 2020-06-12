@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "720902405302",
+    "firebase_url": "https://wander-42195.firebaseio.com",
+    "project_id": "wander-42195",
+    "storage_bucket": "wander-42195.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:720902405302:android:53e47b5f358dbf24b4fa17",
+        "android_client_info": {
+          "package_name": "com.venndii.wander"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "720902405302-4ld2bk6um9tn9pf6u5ngk48h3an9r372.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.venndii.wander",
+            "certificate_hash": "07bad58fe1e3d63b200e7683eb40415141b4ad51"
+          }
+        },
+        {
+          "client_id": "720902405302-829cqajdi6do1jbta1j6056r3et6nni0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA7EyOySzm5wOTJKLoByc7cPtUfs_vYP04"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "720902405302-829cqajdi6do1jbta1j6056r3et6nni0.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "720902405302-jovsunhq7o0v4vba2l0gpvke4qvkusu0.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.venndii.wander"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
