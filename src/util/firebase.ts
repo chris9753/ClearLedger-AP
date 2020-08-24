@@ -92,7 +92,7 @@ export const useProfilePagination = (limit: number = 50) => {
 
     const runTransaction = async () => {
         let query;
-        const profileTopMatchNames = [...myProfile!.placesToGo.map(l => l.formatted_address),myProfile!.homeLocation.formatted_address]
+        const profileTopMatchNames = myProfile!.placesToGo && myProfile!.placesToGo.length ? [...myProfile!.placesToGo.map(l => l.formatted_address),myProfile!.homeLocation.formatted_address] : [myProfile!.homeLocation.formatted_address]
         if (lastVisible.current) {
             query = firestore().collection('user-profiles').where('top1', 'array-contains-any',
             profileTopMatchNames)
@@ -124,10 +124,10 @@ export const useProfilePagination = (limit: number = 50) => {
     }
 
 }
-export const updateProfile = async ({ bio, placesToGo, placesBeen, homeLocation }: Profile) => {
+export const updateProfile = async (profile: Profile) => {
     const user = auth().currentUser
     return new Promise((res, rej) => {
-        firestore().collection('user-profiles').doc(user?.uid).update({ bio, placesToGo, placesBeen, homeLocation })
+        firestore().collection('user-profiles').doc(user?.uid).update({...profile })
             .then(ref => res(ref))
             .catch(err => {
                 rej(err)

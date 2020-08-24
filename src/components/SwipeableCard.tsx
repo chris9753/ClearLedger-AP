@@ -7,6 +7,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { TouchableWithoutFeedback } from 'react-native-gesture-handler';
 import ImageGallery from './ImageGallery';
 import { Profile } from '../entities/profiles/model';
+import layout from '../signed-out/layout';
 
 export type Handle<T> = T extends ForwardRefExoticComponent<RefAttributes<infer T2>> ? T2 : never;
 interface Props {
@@ -253,7 +254,12 @@ function SwipeableCard({ items, onComplete, onSwipeUp, onSwipeLeft, onSwipeRight
                         {/* LABELS -- END */}
                         {/* MAIN */}
                         <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.5)']} style={styles.info}>
-                            <Text style={styles.infoText}>{item.name}, {item.age}</Text>
+                            <View style={layout.column}>
+                            <Text style={styles.infoText}>{item.preferredName ? item.preferredName :item.name} , {item.age}</Text>
+                            <Text style={[styles.infoText,{marginTop:20,fontSize:16}]}>{item.jobTitle} @ {item.company}</Text>
+                            </View>
+                          
+
                         </LinearGradient>
 
                         <ImageGallery key={item.uid} ref={tappableImageGalleryRef} images={item.images || []} id={item.uid} />

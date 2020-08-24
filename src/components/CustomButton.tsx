@@ -17,13 +17,13 @@ interface Props {
 }
 
 
-function CustomButton({ customStyles, icon, onPress, loading, children, color, solid, textColor,disabled }: Props) {
+function CustomButton({ customStyles, icon, onPress, loading, children, color, solid, textColor,disabled=false }: Props) {
 
   return (
-    <TouchableOpacity disabled={disabled} style={[styles(color, solid, textColor).button, customStyles]} onPress={onPress}>
+    <TouchableOpacity disabled={loading || disabled} style={[styles(color, solid, textColor,disabled).button, customStyles,disabled]} onPress={onPress}>
       {!icon ? (
         <View style={stylesdefault.row}>
-          <Text style={[styles(color, solid, textColor).content,{marginRight:8}]}>{children}</Text>
+          <Text style={[styles(color, solid, textColor,disabled).content,{marginRight:8}]}>{children}</Text>
           {loading &&
            <LottieView
            autoPlay 
@@ -37,7 +37,7 @@ function CustomButton({ customStyles, icon, onPress, loading, children, color, s
       ) : (
           <View style={stylesdefault.row}>
             {!loading && icon()}
-            <Text style={[styles(color, solid, textColor).content, stylesdefault.withIcon]}>{children}</Text>
+            <Text style={[styles(color, solid, textColor,disabled).content, stylesdefault.withIcon]}>{children}</Text>
           </View>
         )}
 
@@ -54,7 +54,7 @@ const stylesdefault = StyleSheet.create({
     marginLeft: 10
   }
 })
-const styles = (color: string, solid: boolean, textColor: string) => {
+const styles = (color: string, solid: boolean, textColor: string,disabled:boolean) => {
   let style = {
 
     button: {
@@ -63,7 +63,7 @@ const styles = (color: string, solid: boolean, textColor: string) => {
       marginVertical: 10,
       padding: 11,
       flexGrow: 1,
-      borderWidth: 2,
+      borderWidth: 1,
       borderColor: color,
       backgroundColor: color,
       borderRadius: 150,
@@ -76,7 +76,7 @@ const styles = (color: string, solid: boolean, textColor: string) => {
       color: textColor
     }
   } as any
-  if (!solid) style.button = { ...style.button, backgroundColor: 'transparent' }
+  if (!solid || disabled) style.button = { ...style.button, backgroundColor: 'transparent' }
   if (solid) style.button = { ...style.button, shadowColor: color,borderWidth:2,
     shadowOffset: {
       width: 0,
@@ -86,7 +86,9 @@ const styles = (color: string, solid: boolean, textColor: string) => {
     shadowRadius: 4.00,
   
     elevation: 10 }
-  
+  if(disabled) {
+    style.content = {...style.content,color:color}
+  }
 
   return StyleSheet.create(style)
 }

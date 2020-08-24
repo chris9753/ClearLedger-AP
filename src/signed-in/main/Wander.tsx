@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import React, { useContext, Fragment, useEffect, useState, useRef } from 'react';
-import { StyleSheet, View, SafeAreaView,Text, Modal } from 'react-native';
+import { StyleSheet, View, SafeAreaView,Text, Modal, Image } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import LottieView from 'lottie-react-native';
 import {
@@ -28,6 +28,10 @@ import { useCountRenders } from '../../util/performance';
 import { useProfilePagination } from '../../util/firebase';
 import { Profile } from '../../entities/profiles/model';
 import { ConnectionService } from '../../entities/connections/service';
+import DestinationWizard from './DestinationWizard';
+import layout from '../../signed-out/layout';
+import LinearGradient from 'react-native-linear-gradient';
+import CustomButton from '../../components/CustomButton';
 
 interface Props {
   theme: Theme;
@@ -40,18 +44,19 @@ function Wander({ theme, navigation }: Props) {
   const connections = useConnections()
   const [matched,setMatched] = useState(false);
   const [noWander,setNoWander] = useState(false);
+  const [loadingWanderers,setLoadingWanderers] = useState(false);
   const {next, ready} = useProfilePagination(50)
+  const [addingDestination,setAddingDestination] = useState(false);
   const user = useContext(UserContext);
   if (!user) {
     return null;
   }
   useEffect(() => {
-   
+    console.log("am i ever ready??")
+    if(ready && profile)
       loadWanderers()
 
-  
-  
-  }, [ready,profile,connections])
+  }, [ready,profile])
   useEffect(()=> {
     console.log('changed?')
   },[profile])
@@ -61,6 +66,7 @@ function Wander({ theme, navigation }: Props) {
 //  },[profile, profile && profile!.top1])
 // !loading wanderers first time!
   const loadWanderers = async () => {
+    console.log("connections",connections)
     if(ready && wanderers.length == 0 && profile && connections) {
      let x = await  next()
         let profiles = x.map( doc => { return {uid:doc.id,...doc.data()} as Profile })
@@ -68,7 +74,10 @@ function Wander({ theme, navigation }: Props) {
         let connector = new ConnectionService(connections!,profile!)
         let validConnections = profiles.filter(profile => connector!.shouldDisplay(profile.uid!))
         console.log(validConnections,"the connections",profiles)
-        if(validConnections.length == 0) { setNoWander(true)} else{
+        if(validConnections.length == 0) { 
+          setNoWander(true)
+          
+        } else{
           setNoWander(false)
           setWanderers(validConnections)
         }
@@ -131,6 +140,22 @@ function Wander({ theme, navigation }: Props) {
         </TouchableOpacity>
 
       </Hero>
+      { noWander ? <LinearGradient colors={['rgba(255,255,255,1)', 'rgba(255,255,255,.55)', 'rgba(255,255,255,0.7189250700280112)']} style={styles.info}>
+                <View style={[layout.full]}>
+                    <CustomButton
+                        textColor={'#fff'}
+                        color={'#0A0F3D'}
+                        solid={true}
+                        loading={false}
+                        onPress={() => setAddingDestination(true)}
+                        disabled={false}
+                    >
+                        { 'schedule a trip' }
+                    </CustomButton>
+                </View>
+            </LinearGradient>
+            : null
+}
       <Modal
                 animationType="slide"
                 transparent={true}
@@ -139,6 +164,49 @@ function Wander({ theme, navigation }: Props) {
             >
                 <Match></Match>
             </Modal>
+            <Modal
+                animationType="slide"
+                transparent={false}
+                visible={addingDestination}
+                
+            >
+                <DestinationWizard onClose={() => setAddingDestination(false)}></DestinationWizard>
+            </Modal>
+            {/*  NO WANDERS */}
+            { noWander ?  <View style={[layout.main, styles.contentArea,{justifyContent:'flex-start'}]}>
+
+           
+            <View style={[layout.full]}>
+          <View style={[layout.row, layout.header,{marginBottom:30,justifyContent:'center'}]}>
+            <View style={layout.column}>
+             <Text style={layout.heading}>
+               Hey! You're all alone...
+             </Text>
+            </View>
+            </View>
+            <View style={[layout.wordBox,{marginVertical:20}]}>
+            
+            
+            <View style={layout.column}>
+              <Text style={layout.info}>
+            
+                Let's get you out there to see the world. Schedule a trip now, 
+                and start making those connections.
+            
+              </Text>
+            </View>
+            </View>
+            <View style={[layout.row,{marginTop:20}]}>
+              <Image style={{height:400,width:'100%'}}source={require('../../../assets/images/map.png')}/>
+              </View>
+            </View>
+
+       
+          </View>
+          
+          : null
+}
+
       { wanderers.length ?
         <SafeAreaView style={styles.content}>
  
@@ -150,11 +218,8 @@ function Wander({ theme, navigation }: Props) {
 
         <SafeAreaView style={styles.loadingContent}>
           
-          { noWander ? <Headline> No wanderers here. Try adding more places in <Text onPress={() => {
-             requestAnimationFrame(() => {
-              navigation.navigate('Profile')
-            })
-          }}>settings</Text></Headline>
+          { noWander ? <></>
+          
         :  
         <LottieView
            autoPlay 
@@ -215,7 +280,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     // position: 'relative',
-    // backgroundColor: 'white',
+    backgroundColor: 'white',
     justifyContent: 'center'
   },
   loadingContent: {
@@ -232,6 +297,37 @@ const styles = StyleSheet.create({
     position: 'relative',
     flex: 1,
     // overflow: 'hidden', paddingBottom: 30 
+  },
+  info: {
+    flex: 1,
+    zIndex: 1,
+    position: 'absolute',
+    bottom: 0,
+    flexDirection: 'row',
+    height: 125,
+    width: '100%',
+    paddingTop: 30,
+    paddingHorizontal: 20,
+    // borderRadius: 8,
+
+
+
+
+    // marginTop
+},
+  contentArea: {
+    marginTop: 30,
+    // overflow: 'hidden',
+    // marginBottom: 0,
+    // position:'relative',
+    flex: 1,
+    // alignContent:'center',
+    // alignItems:'center',
+    // justifyContent: 'center'
+    // justifySelf
+    // flexDirection:'column',
+    // alignSelf:'center',
+
   },
   avatar: {
     borderColor: '#fff',

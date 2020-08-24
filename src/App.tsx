@@ -21,12 +21,14 @@ export type User = FirebaseAuthTypes.User | null;
 export const UserContext = createContext<User>(null);
 const wait = (time: any) => new Promise((resolve) => setTimeout(resolve, time));
 function App() {
+  
   const [initializing, setInitializing] = useState(true);
   const [listenUser, setListenUser] = useState(false);
   const [user, setUser] = useState<User>(null);
 
   /** Listen for auth state changes */
   useEffect(() => {
+  
     const authListener = auth().onAuthStateChanged( async result => {
       setUser(result);
       if (initializing && !listenUser) {

@@ -15,9 +15,9 @@ export const colors = {
   "light": {
     primary: '#FD6738',
     secondary:'#F11856',
-    accent: '#4DD7C4',
+    accent: '#0F29AC',
     text: { 
-      title: "#FD6738",
+      title: "#082246",
       heading: "#535353",
       warning:"#C8C7C7"
     },

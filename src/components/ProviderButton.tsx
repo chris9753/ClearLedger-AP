@@ -17,11 +17,11 @@ interface Props {
 function getSocialColor(type: SocialType): string {
   switch (type) {
     case 'facebook':
-      return '#F11856';
+      return '#0F29AC';
     case 'google':
       return '#F96458';
     case 'phone':
-      return '#4DD7C4';
+      return '#1B1464';
   }
 }
 
@@ -31,7 +31,7 @@ function ProviderButton({style, type, onPress, loading, children}: Props) {
     <CustomButton  
     // icon={() => <Icon name={type} color="#fff" size={17} />}
     customStyles={style}
-    textColor={'#9D9D9D'}
+    textColor={'#0A0F3D'}
     color={getSocialColor(type)}
     solid={false}
     loading={loading}

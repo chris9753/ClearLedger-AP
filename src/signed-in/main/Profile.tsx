@@ -1,4 +1,4 @@
-import { SafeAreaView, View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, SectionList, TextInput, Modal } from "react-native";
+import { SafeAreaView, View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, SectionList, TextInput, Modal, StatusBar } from "react-native";
 import { ScrollView, TouchableWithoutFeedback } from "react-native-gesture-handler";
 import Hero from '../../components/Hero';
 import React, { Fragment, useState, useEffect, useRef } from "react";
@@ -15,6 +15,7 @@ import LinearGradient from "react-native-linear-gradient";
 import layout from "../../signed-out/layout";
 import { useCountRenders } from "../../util/performance";
 import ImageCarousel from "../../components/ImageCarousel";
+import { sample } from 'lodash'
 import { Profile as ProfileType, Image as ProfileImageType, Location } from '../../entities/profiles/model'
 // @ts-ignore
 import { ImageManipulator } from 'expo-image-crop'
@@ -22,13 +23,56 @@ import PictureTaker from "../../components/Camera";
 import { optimizeHeavyScreen } from '../../util/OptimizeHeavyScreen'
 import { useProfile } from "../../util/helpers";
 import auth from '@react-native-firebase/auth'
+import BubbleTag from "../../components/BubbleTag";
+import Floater from 'react-native-modal';
+import posed, { Transition } from 'react-native-pose'
+// @ts-ignore
+import Popup, { ModalContent } from 'react-native-modals';
+import HeightSelector from "../../components/HeightSelector";
+import DestinationWizard from "./DestinationWizard";
+// @ts-ignore
+import SearchableDropdown from 'react-native-searchable-dropdown';
+import Interests from "../intro/Interests";
 interface Props {
     theme: Theme;
     route: any;
     navigation: NavigationParams;
 }
 
-
+const items = [
+    {
+        id: 1,
+        name: 'Chinese(Mandarin)',
+    },
+    {
+        id: 2,
+        name: 'Russian',
+    },
+    {
+        id: 3,
+        name: 'Farsi',
+    },
+    {
+        id: 4,
+        name: 'Hebrew',
+    },
+    {
+        id: 5,
+        name: 'English',
+    },
+    {
+        id: 6,
+        name: 'German',
+    },
+    {
+        id: 7,
+        name: 'Arabic',
+    },
+    {
+        id: 8,
+        name: 'Klingon',
+    },
+];
 function Profile({ theme, route, navigation }: Props) {
 
     const profile = useProfile()
@@ -38,9 +82,24 @@ function Profile({ theme, route, navigation }: Props) {
     const [editingPhoto, setEditingPhoto] = useState(false)
     const [pickingPhoto, setPickingPhoto] = useState(false)
     const photoUri = useRef<ProfileImageType | null>(null)
+    const [visible, setVisible] = useState(false)
     const [currentProfile, updateCurrentProfile] = useState<ProfileType | null>(null)
     const addingPhoto = useRef(false)
+    const [addingInterests, setAddingInterests] = useState(false)
+    const [selectedLanguages, setSelectedLanguages] = useState([]) as any
+    const [addingDestination, setAddingDestination] = useState('')
+    const [selectedLanguage, setSelectedLanguage] = useState('')
+    const [removingLanguage, setRemovingLanguage] = useState(false)
+    function toFeet(cm: number) {
+        let totalInches = (cm * 0.393700);
+        let inches = Math.round(totalInches % 12);
+        let feet = Math.floor(totalInches / 12);
 
+        if (inches === 12) {
+            feet += 1; inches = 0;
+        }
+        return { feet, inches };
+    }
     useCountRenders('profileView')
     const mapArrayToDataObject = (arr: any[]) => {
         const data = [arr.reduce((l: { [x: string]: any; }, n: any) => {
@@ -86,6 +145,8 @@ function Profile({ theme, route, navigation }: Props) {
                 </TouchableOpacity>
 
                 {/* <Text style={[{marginLeft:10,fontSize:16},styles.text,]}>A</Text> */}
+
+
             </View>
         } else {
 
@@ -122,24 +183,25 @@ function Profile({ theme, route, navigation }: Props) {
         let newProfile: ProfileType = { ...currentProfile!, "bio": text }
         updateCurrentProfile(newProfile)
     }
-    const onChangePlacesGo = async (place: Location, top1: any) => {
-        //create more top1's nearby.
-        let result = await getNearbyCitiesFromApiAsync(place.location.lat, place.location.lng)
-        let newTop1Index = [...new Set([...currentProfile!.top1, top1.long_name,...result])]
-        const old = currentProfile!.placesToGo ? currentProfile!.placesToGo : []
+    // const onChangePlacesGo = async (place: Location, top1: any) => {
+    //     //create more top1's nearby.
+    //     let result = await getNearbyCitiesFromApiAsync(place.location.lat, place.location.lng)
+    //     let newTop1Index = [...new Set([...currentProfile!.top1, top1.long_name, ...result])]
+    //     const old = currentProfile!.placesToGo ? currentProfile!.placesToGo : []
 
-        let newProfile: ProfileType = { ...currentProfile!, placesToGo: [...old, place], top1: newTop1Index }
-        updateCurrentProfile(newProfile)
-    }
-    const onChangePlacesBeen = async (place: Location, top1: any) => {
-        //create more top1's nearby.
-        let result = await getNearbyCitiesFromApiAsync(place.location.lat, place.location.lng)
-        let newTop1Index = [...new Set([...currentProfile!.top1, top1.long_name, ...result])]
-        const old = currentProfile!.placesBeen ? currentProfile!.placesBeen : []
-        let newProfile: ProfileType = { ...currentProfile!, placesBeen: [...old, place], top1: newTop1Index }
-        console.log(newProfile.placesBeen)
-        updateCurrentProfile(newProfile)
-    }
+    //     let newProfile: ProfileType = { ...currentProfile!, placesToGo: [...old, place], top1: newTop1Index }
+    //     updateCurrentProfile(newProfile)
+    // }
+    // const onChangePlacesBeen = async (place: Location, top1: any) => {
+    //     //create more top1's nearby.
+    //     let result = await getNearbyCitiesFromApiAsync(place.location.lat, place.location.lng)
+    //     let newTop1Index = [...new Set([...currentProfile!.top1, top1.long_name, ...result])]
+    //     const old = currentProfile!.placesBeen ? currentProfile!.placesBeen : []
+    //     let newProfile: ProfileType = { ...currentProfile!, placesBeen: [...old, place], top1: newTop1Index }
+    //     console.log(newProfile.placesBeen)
+    //     updateCurrentProfile(newProfile)
+    // }
+
     const addPictureToProfile = async (uri: string) => {
         if (!addingPhoto.current) {
             addPhoto(uri).then(res => {
@@ -148,6 +210,16 @@ function Profile({ theme, route, navigation }: Props) {
         }
 
     }
+
+    const onSelectNewHeight = (heightInCM: number) => {
+        console.log('new height selected', heightInCM)
+        updateCurrentProfile({ ...currentProfile!, height: heightInCM })
+    }
+    const removeLanguage = () => {
+        let languages = currentProfile!.languages.filter(l => l != selectedLanguage)
+        updateCurrentProfile({ ...currentProfile!, languages })
+    }
+
     const onChangeHomeLocation = async (place: Location, top1: any) => {
         //create more top1's nearby.
         let result = await getNearbyCitiesFromApiAsync(place.location.lat, place.location.lng)
@@ -156,6 +228,7 @@ function Profile({ theme, route, navigation }: Props) {
         let newProfile: ProfileType = { ...currentProfile!, homeLocation: place, top1: newTop1Index }
         updateCurrentProfile(newProfile)
     }
+
     return (
 
         <View style={styles.container}>
@@ -163,11 +236,58 @@ function Profile({ theme, route, navigation }: Props) {
                 <TouchableOpacity onPress={() => navigation.navigate('Wander')}>
                     <Icon name="dot-circle" color={GlobalTheme.colors.light.secondary} solid size={26} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={()=> {auth().signOut()}}>
+                <TouchableOpacity onPress={() => { navigation.navigate('Settings')}}>
                     <Icon name="ellipsis-v" color={GlobalTheme.colors.light.text.warning} solid size={24} />
                 </TouchableOpacity>
 
             </Hero>
+            {/* MODAL PICKERS */}
+            <Modal
+                animationType="slide"
+                transparent={false}
+                visible={addingDestination != ''}
+
+            >
+                <DestinationWizard type={addingDestination} onClose={() => setAddingDestination('')}></DestinationWizard>
+            </Modal>
+            <Modal
+                animationType="slide"
+                transparent={false}
+                visible={addingInterests}
+
+            >
+                <Interests finished={(obj: any) => {
+                    updateCurrentProfile({ ...currentProfile!, ...obj })
+                    setAddingInterests(false)
+                }}></Interests>
+            </Modal>
+            <Modal
+                animationType="fade"
+                transparent={true}
+                visible={removingLanguage}>
+                <View style={styles.modalContainer} onStartShouldSetResponder={() => {
+                    setRemovingLanguage(true)
+                    return true
+                }}>
+                    <StatusBar backgroundColor="#2200001C" barStyle="dark-content" />
+                    <Transition animateOnMount={true} enterPose="enter" exitPose="exit">
+                        <DeleteButtonView key="delete" style={{ backgroundColor: 'white', paddingTop: 20 }}>
+                            <View style={styles.modalWrapper}>
+                                <Text style={styles.warning}>{`Are you sure, you want to delete ${selectedLanguage}`}</Text>
+                            </View>
+                            <View style={styles.actionWrapper}>
+                                <TouchableOpacity style={styles.actionButton} onPress={() => setRemovingLanguage(false)}>
+                                    <Text style={[styles.actionText, { color: 'grey' }]}>Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={removeLanguage} style={styles.actionButton}>
+                                    <Text style={[styles.actionText, { color: 'tomato' }]}>Delete</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </DeleteButtonView>
+                    </Transition>
+                </View>
+            </Modal>
+
             {/* image picker */}
             <ImageManipulator
                 key={photoUri.current?.uri}
@@ -186,7 +306,7 @@ function Profile({ theme, route, navigation }: Props) {
             </Modal>
             <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="always" style={[styles.main]}>
 
-                <Animated.View style={styles.stage}>
+                <Animated.View style={[styles.stage, { justifyContent: 'center', alignContent: 'center' }]}>
                     <View style={styles.screen}>
                         <View style={{ flexDirection: 'row', alignItems: 'flex-start', paddingTop: 20, paddingLeft: 20 }}>
                             <Icon name="eye" color={"#52575D"} solid size={22} />
@@ -206,7 +326,7 @@ function Profile({ theme, route, navigation }: Props) {
                     {/* <Icon name="arrow-circle-down"  color={GlobalTheme.colors.light.secondary} size={32} /> */}
                     {/* </TouchableOpacity> */}
 
-                    {true && currentProfile && imageCarouselRef ? <ImageGallery imageStyle={{
+                    {true && currentProfile && imageCarouselRef && currentProfile.images!.length > 0 ? <ImageGallery imageStyle={{
                         flex: 1,
                         alignSelf: 'stretch',
                         height: undefined,
@@ -214,17 +334,27 @@ function Profile({ theme, route, navigation }: Props) {
                         // borderRadius: 8,
                         // overflow:'hidden',
                         resizeMode: 'cover'
-                    }} ref={tappableImageGalleryRef} onIndexChange={(i: number) => (imageCarouselRef.current as any).setCarouselIndex(i + 1)} images={(currentProfile.images)!}></ImageGallery> : null}
+                    }} ref={tappableImageGalleryRef} onIndexChange={(i: number) => (imageCarouselRef.current as any).setCarouselIndex(i + 1)} images={(currentProfile.images)!}></ImageGallery> :
+
+                        <View style={[layout.row, layout.header, { alignItems: 'center', justifyContent: 'center', alignContent: 'center', alignSelf: 'center' }]}>
+                            <View style={[layout.column]}>
+                                <Text style={[layout.heading]}>
+                                    You're beautiful add an image!
+                            </Text>
+                            </View>
+                        </View>
+                    }
+
                 </Animated.View>
 
 
-                {true && currentProfile ? <ImageCarousel ref={imageCarouselRef} sections={mapArrayToDataObject(['placeholder', ...currentProfile.images!]) as any} viewToRender={carouselItem} /> : null}
+                {currentProfile ? <ImageCarousel ref={imageCarouselRef} sections={mapArrayToDataObject(['placeholder', ...currentProfile.images!]) as any} viewToRender={carouselItem} /> : null}
 
 
 
                 {currentProfile ? <View style={styles.profileContent}>
                     <View style={[layout.column]}>
-                        <View style={[layout.row, { marginTop: 10, marginBottom: 20, alignItems: 'center' }]}>
+                        <View style={[layout.row, { marginTop: 10, marginBottom: 20, alignItems: 'center', padding: 20 }]}>
                             {!editingMode ?
                                 <TouchableOpacity style={layout.row} onPress={() => setEditingMode(true)}>
                                     <Icon name="edit" color={'rgb(34, 167, 240)'} size={20}></Icon>
@@ -238,7 +368,7 @@ function Profile({ theme, route, navigation }: Props) {
                             }
 
                         </View>
-                        <View style={[layout.row, { marginTop: 10, alignItems: 'center' }]}>
+                        <View style={[layout.row, { marginTop: 10, alignItems: 'center' }, layout.firstItemSection]}>
 
 
                             {editingMode ? <>
@@ -284,36 +414,97 @@ function Profile({ theme, route, navigation }: Props) {
                                     queryFields={`formatted_address,geometry,name,address_components`}
                                     googleApiKey={'AIzaSyDcRpn_oyQUNlR4Wy370jCbJ0S0uy3hxqk'}
 
-                                    onSelect={(place: any) => { 
-                                        onChangeHomeLocation({ formatted_address: place.result.name, location: place.result.geometry.location }, 
-                                            place['result']['address_components'] ? place['result']['address_components'].find((comp: any) => comp['types'].includes('administrative_area_level_1')): place['result']['name']) }
-                                        }
-                                    
+                                    onSelect={(place: any) => {
+                                        onChangeHomeLocation({ formatted_address: place.result.name, location: place.result.geometry.location },
+                                            place['result']['address_components'] ? place['result']['address_components'].find((comp: any) => comp['types'].includes('administrative_area_level_1')) : place['result']['name'])
+                                    }
+                                    }
+
                                 />
                             </>
                                 : <>
                                     <View style={{ flex: .4, flexDirection: 'row' }}>
                                         <Icon name="map-marker-alt" color={"#AEB5BC"} size={20}></Icon>
                                         <Text style={[styles.text, { color: "#AEB5BC", fontSize: 16, marginLeft: 8 }]}>Based In</Text>
+                                        <Text style={[styles.text, { fontSize: 16, marginLeft: 8, color: "#52575D" }]}>
+                                            {currentProfile?.homeLocation.formatted_address}
+                                        </Text>
                                     </View>
-                                    <Text style={[styles.text, { fontSize: 16, marginLeft: 20, color: "#52575D" }]}>
-                                        {currentProfile?.homeLocation.formatted_address}
-                                    </Text>
+
                                 </>
                             }
 
                         </View>
                     </View>
-                    <View style={[layout.row, { marginTop: 50 }]}>
-                        <View style={[layout.column]}>
+                    {/* places I want to Go */}
+                    <View style={[layout.row, layout.itemSection]}>
+                        <View style={[layout.column, { flex: 1 }]}>
+                            <View style={[layout.row, { alignItems: 'center' }]}>
+                                <Text style={[styles.text, { color: "#AEB5BC", fontSize: 16, marginRight: 10 }]}>Planned trips</Text>
+                                {editingMode ?
+                                    <TouchableOpacity onPress={() => setAddingDestination('going')}>
+                                        <Icon name="plus" color={"#AEB5BC"} size={20}></Icon>
+                                    </TouchableOpacity>
+                                    : null}
+                            </View>
+
+                            {/* TAG CLOUD */}
+                            <View style={[layout.row, { flex: 1, marginVertical: 10, flexWrap: 'wrap' }]}>
+
+
+                                {currentProfile?.placesToGo && currentProfile!.placesToGo.map((e) => {
+                                    return <BubbleTag onSelect={() => { }} heading={e.formatted_address} >
+                                        <Text style={[styles.text, { color: 'white' }]}>Arrival: {e.meta.arrival}</Text>
+                                    </BubbleTag>
+                                })}
+
+                            </View>
+
+
+                        </View>
+
+                    </View>
+
+                    {/* interests */}
+                    <View style={[layout.row, layout.itemSection]}>
+                        <View style={[layout.column, { flex: 1 }]}>
+                            <View style={[layout.row, { alignItems: 'center' }]}>
+                                <Text style={[styles.text, { color: "#AEB5BC", fontSize: 16, marginRight: 10 }]}> Interests </Text>
+                                <Icon name="hiking" color={"#AEB5BC"} size={18}></Icon>
+                                {editingMode ?
+                                    <TouchableOpacity onPress={() => setAddingInterests(true)}>
+                                        <Icon name="plus" color={"#AEB5BC"} size={20}></Icon>
+                                    </TouchableOpacity>
+                                    : null}
+                            </View>
+
+                            {/* TAG CLOUD */}
+                            <View style={[layout.row, { flex: 1, marginVertical: 10, flexWrap: 'wrap' }]}>
+
+
+                                {currentProfile?.interests && currentProfile!.interests.map((e) => {
+                                    return <BubbleTag onSelect={() => { }} heading={e.title} >
+
+                                    </BubbleTag>
+                                })}
+
+                            </View>
+
+
+                        </View>
+
+                    </View>
+                    <View style={[layout.row, layout.itemSection]}>
+                        <View style={[layout.column, { width: '85%' }]}>
                             <Text style={[styles.text, { color: "#AEB5BC", fontSize: 16, marginBottom: 10 }]}>About Me</Text>
+
                             {editingMode ? <TextInput
                                 multiline
                                 // numberOfLines={4}
                                 value={currentProfile?.bio}
                                 maxLength={256}
                                 onChangeText={onChangeBio}
-                                style={[styles.text, { fontSize: 14, color: "#52575D", borderBottomColor: 'grey', borderBottomWidth: 1 }]}>
+                                style={[styles.text, { fontSize: 14, color: "#52575D", borderBottomColor: 'grey', borderBottomWidth: 1 }, styles.inputBox]}>
 
                             </TextInput> :
                                 <Text style={[styles.text, { fontSize: 14, color: "#52575D" }]}>
@@ -321,67 +512,116 @@ function Profile({ theme, route, navigation }: Props) {
                                 </Text>
                             }
 
+
+
                         </View>
 
                     </View>
-                    <View style={[layout.row, { marginTop: 50 }]}>
+                    {/*  */}
+                    <View style={[layout.row, layout.itemSection]}>
+                        <View style={[layout.column]}>
+                            <View style={[layout.row, { marginBottom: 20, alignItems: 'center' }]}>
+
+                                <Text style={[styles.text, { color: "#AEB5BC", fontSize: 16, marginRight: 10 }]}>Languages</Text>
+                                <Icon name="language" color={"#AEB5BC"} size={20}></Icon>
+
+                            </View>
+                            <View style={[layout.row]}>
+                                {currentProfile && currentProfile.languages.map(l => {
+                                    return editingMode ? <TouchableOpacity onLongPress={() => {
+                                        setSelectedLanguage(l)
+                                        setRemovingLanguage(true)
+                                    }}>
+                                        <View style={{ padding: 5, borderRadius: 5, backgroundColor: 'rgba(166,166,166,0.8)', marginRight: 9, paddingHorizontal: 25 }}>
+                                            <Text style={[styles.text, { color: 'white' }]}>{l}</Text>
+                                        </View>
+                                    </TouchableOpacity> : <View style={{ padding: 5, borderRadius: 5, backgroundColor: 'rgba(166,166,166,0.8)', marginRight: 9, paddingHorizontal: 25 }}>
+                                            <Text style={[styles.text, { color: 'white' }]}>{l}</Text>
+                                        </View>
+                                })}
+
+                            </View>
+                            {editingMode ? <View style={[layout.row, layout.full]}>
+                                {/* Single */}
+                                <SearchableDropdown
+                                    onItemSelect={(item: any) => {
+                                        const items = selectedLanguages
+                                        setSelectedLanguages([...items, item])
+                                        updateCurrentProfile({ ...currentProfile, ...{ languages: [...new Set([...currentProfile.languages, item.name])] } })
+                                    }}
+                                    containerStyle={{ padding: 0, width: '100%', marginTop: 5 }}
+                                    onRemoveItem={(item: { id: any; }, index: any) => {
+                                        const items = selectedLanguages.filter((sitem: { id: any; }) => sitem.id !== item.id);
+                                        setSelectedLanguages([...items])
+                                    }}
+                                    itemStyle={{
+                                        padding: 10,
+                                        marginTop: 2,
+                                        backgroundColor: 'rgba(166,166,166,0.1)',
+                                        borderBottomColor: '#bbb',
+                                        borderBottomWidth: 1,
+                                        borderRadius: 5,
+                                    }}
+                                    itemTextStyle={{ color: '#222' }}
+                                    itemsContainerStyle={{ maxHeight: 140 }}
+                                    items={items}
+                                    defaultIndex={2}
+                                    resetValue={false}
+                                    textInputProps={
+                                        {
+                                            placeholder: "placeholder",
+                                            underlineColorAndroid: "transparent",
+                                            style: {
+                                                padding: 12,
+                                                borderWidth: 1,
+                                                borderColor: '#ccc',
+                                                borderRadius: 5,
+
+                                            },
+                                            onTextChange: (text: any) => { }
+                                        }
+                                    }
+                                    listProps={
+                                        {
+                                            nestedScrollEnabled: true,
+                                        }
+                                    }
+                                />
+                            </View>
+                                : null}
+
+                        </View>
+                    </View>
+                    <View style={[layout.row, layout.itemSection]}>
                         <View style={[layout.column, { flex: 1 }]}>
 
-                            <Text style={[styles.text, { color: "#AEB5BC", fontSize: 16, marginBottom: 10 }]}>Places I've been</Text>
+                            <View style={[layout.row, { alignItems: 'center' }]}>
+                                <Text style={[styles.text, { color: "#AEB5BC", fontSize: 16, marginRight: 10 }]}>Places I've Been</Text>
+                                {editingMode ?
+                                    <TouchableOpacity onPress={() => setAddingDestination('been')}>
+                                        <Icon name="plus" color={"#AEB5BC"} size={20}></Icon>
+                                    </TouchableOpacity>
+                                    : null}
+                            </View>
                             {/* TAG CLOUD */}
                             <View style={[layout.row, { flex: 1, marginVertical: 10, flexWrap: 'wrap' }]}>
 
-                                {currentProfile?.placesBeen && currentProfile!.placesBeen.map((place: Location) => {
-                                    return <View key={place.formatted_address} style={{ paddingHorizontal: 25, paddingVertical: 10, backgroundColor: 'rgb(232, 236, 241)', borderRadius: 6, marginLeft: 5, marginVertical: 10 }}>
-                                        <Text style={[styles.text, { fontSize: 14, color: 'black' }]}>
-                                            {place.formatted_address}
-                                        </Text>
-                                    </View>
+                                {currentProfile?.placesBeen && ["Gibraltar,Gibraltar", "Kansas,Texas", "Croatia,Zalgreb"].map((e) => {
+                                    return <BubbleTag onSelect={() => { }} heading={e} >
+                                        <Text style={[styles.text, { color: 'white' }]}>Dates usually show up here</Text>
+                                    </BubbleTag>
+                                })}
+
+                                {currentProfile?.placesToGo && currentProfile!.placesBeen.map((e) => {
+                                    return <BubbleTag onSelect={() => { }} heading={e.formatted_address} >
+                                        <Text style={[styles.text, { color: 'white' }]}>Arrival: {e.meta.arrival}</Text>
+                                    </BubbleTag>
                                 })}
 
                             </View>
                             {editingMode ?
                                 <View style={[layout.row]}>
-                                    <PlacesInput
-                                        placeHolder={"The Grand Canyon"}
-                                        stylesInput={{
-                                            // backgroundColor:'grey'
-                                        }}
-                                        stylesContainer={{
-                                            position: 'relative',
-                                            flex: .8,
-                                            alignSelf: 'stretch',
-                                            //    width:'90%',
-                                            //     margin: 0,
-                                            top: 0,
-                                            //     left: 0,
-                                            //     right: 0,
-                                            //     bottom: 0,
-
-                                            marginTop: 0,
-                                            shadowOpacity: 0,
-                                            elevation: 0,
-                                            borderBottomWidth: 1,
-                                            borderBottomColor: '#dedede',
-                                            //     borderColor: '#dedede',
-                                            //     borderWidth: 1,
-                                            //     marginBottom: 10
-                                        }}
-                                        stylesList={{
-                                            top: 50,
-                                            borderColor: '#dedede',
-                                            borderLeftWidth: 1,
-                                            borderRightWidth: 1,
-                                            borderBottomWidth: 1,
-                                            left: -1,
-                                            right: -1
-                                        }}
-                                        googleApiKey={'AIzaSyDcRpn_oyQUNlR4Wy370jCbJ0S0uy3hxqk'}
-                                        onSelect={(place: any) => { 
-                                            onChangePlacesBeen({ formatted_address: place.result.name, location: place.result.geometry.location }, 
-                                                place['result']['address_components'] ? place['result']['address_components'].find((comp: any) => comp['types'].includes('administrative_area_level_1')): place['result']['name']) }}
-                                    />
-
+                                    {/* plus button */}
                                 </View>
 
                                 :
@@ -392,77 +632,172 @@ function Profile({ theme, route, navigation }: Props) {
 
                     </View>
 
-                    {/* places I want to Go */}
-                    <View style={[layout.row, { marginTop: 50 }]}>
-                        <View style={[layout.column, { flex: 1 }]}>
 
-                            <Text style={[styles.text, { color: "#AEB5BC", fontSize: 16, marginBottom: 10 }]}>Places I want to go</Text>
-                            {/* TAG CLOUD */}
-                            <View style={[layout.row, { flex: 1, marginVertical: 10, flexWrap: 'wrap' }]}>
+                </View>
+                    : null
+                }
+                {/* Height */}
+                <View style={[layout.row, layout.itemSection]}>
+                    <View style={[layout.column]}>
+                        <View style={[layout.row, { marginBottom: 20, alignItems: 'center' }]}>
 
-                                {currentProfile?.placesToGo && currentProfile!.placesToGo.map((place: Location) => {
-                                    return <View key={place.formatted_address} style={{ paddingHorizontal: 25, paddingVertical: 10, backgroundColor: 'rgb(232, 236, 241)', borderRadius: 6, marginLeft: 5, marginVertical: 10 }}>
-                                        <Text style={[styles.text, { fontSize: 14, color: 'black' }]}>
-                                            {place.formatted_address}
-                                        </Text>
+                            <Text style={[styles.text, { color: "#AEB5BC", fontSize: 16, marginRight: 10 }]}>Height</Text>
+                            <Icon name="ruler" color={"#AEB5BC"} size={20}></Icon>
+                        </View>
+                        <View style={[layout.row, { marginBottom: 20 }]}>
+                            {editingMode ? <>
+                                <TouchableOpacity onPress={() => setVisible(true)}>
+                                    <View style={{ padding: 5, borderRadius: 20, borderColor: '#0F29AC', borderWidth: 1, marginRight: 9, paddingHorizontal: 25 }}>
+                                        <Text style={styles.text}>{currentProfile && `${toFeet(currentProfile.height).feet}'${toFeet(currentProfile!.height).inches}"`}</Text>
                                     </View>
-                                })}
+                                </TouchableOpacity>
 
-                            </View>
-                            {editingMode ?
-                                <View style={[layout.row]}>
-                                    <PlacesInput
-                                        placeHolder={"The Pyramids"}
-                                        stylesInput={{
-                                            // backgroundColor:'grey'
-                                        }}
-                                        stylesContainer={{
-                                            position: 'relative',
-                                            flex: .8,
-                                            alignSelf: 'stretch',
-                                            //    width:'90%',
-                                            //     margin: 0,
-                                            top: 0,
-                                            //     left: 0,
-                                            //     right: 0,
-                                            //     bottom: 0,
-
-                                            marginTop: 0,
-                                            shadowOpacity: 0,
-                                            elevation: 0,
-                                            borderBottomWidth: 1,
-                                            borderBottomColor: '#dedede',
-                                            //     borderColor: '#dedede',
-                                            //     borderWidth: 1,
-                                            //     marginBottom: 10
-                                        }}
-                                        stylesList={{
-                                            top: 50,
-                                            borderColor: '#dedede',
-                                            borderLeftWidth: 1,
-                                            borderRightWidth: 1,
-                                            borderBottomWidth: 1,
-                                            left: -1,
-                                            right: -1
-                                        }}
-                                        googleApiKey={'AIzaSyDcRpn_oyQUNlR4Wy370jCbJ0S0uy3hxqk'}
-                                        onSelect={(place: any) => { 
-                                            onChangePlacesGo({ formatted_address: place.result.name, location: place.result.geometry.location }, 
-                                                place['result']['address_components'] ? place['result']['address_components'].find((comp: any) => comp['types'].includes('administrative_area_level_1')): place['result']['name']) }}
-                                    />
-
-                                </View>
-
-                                :
-                                null
+                                <TouchableOpacity onPress={() => setVisible(true)}>
+                                    <View style={{ padding: 5, borderRadius: 20, borderColor: '#4527B4', borderWidth: 1, paddingHorizontal: 25 }}>
+                                        <Text style={styles.text}>{currentProfile && currentProfile.height} CM</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            </>
+                                : <>
+                                    <View style={{ padding: 5, borderRadius: 20, borderColor: '#0F29AC', borderWidth: 1, marginRight: 9, paddingHorizontal: 25 }}>
+                                        <Text style={styles.text}>{currentProfile && `${toFeet(currentProfile.height).feet}'${toFeet(currentProfile!.height).inches}"`}</Text>
+                                    </View>
+                                    <View style={{ padding: 5, borderRadius: 20, borderColor: '#4527B4', borderWidth: 1, paddingHorizontal: 25 }}>
+                                        <Text style={styles.text}>{currentProfile && currentProfile.height} CM</Text>
+                                    </View>
+                                </>
                             }
 
+
                         </View>
+                        <Floater
+                            isVisible={visible}
+                            onBackdropPress={() => setVisible(false)}
+                            style={{
+                                flex: 1,
+                                flexDirection: 'column',
+                                // alignItems: 'flex-end'
+                            }}
+                        >
+                            <View style={[layout.row, { justifyContent: 'center', alignContent: 'center', alignItems: 'center' }]}>
+                                <HeightSelector onSelect={onSelectNewHeight}></HeightSelector>
+                            </View>
+
+
+                        </Floater>
+
+
 
                     </View>
                 </View>
-                    : null}
+                {/* Preferred Name */}
+                <View style={[layout.row, layout.itemSection]}>
+                    <View style={[layout.column,]}>
+                        <Text style={[styles.text, { color: "#AEB5BC", fontSize: 16, marginRight: 10 }]}>Preferred Name</Text>
+
+                      {editingMode ?  
+                      <TextInput
+                            //  onFocus={handleFocus}
+                            //  onBlur={handleBlur}
+                            style={[styles.input, { borderBottomColor: '#888888' }]}
+                            // mode="outlined"
+                            // label="Email Address"
+                            placeholder={"Johnny Cash"}
+                            value={currentProfile ? currentProfile!.preferredName : ''}
+
+                            onChangeText={(txt: string) => updateCurrentProfile({ ...currentProfile!, preferredName: txt })}
+                            // theme={inputTheme}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                      /> :
+
+                      <Text style={[styles.text, { color: "black", fontSize: 16, marginRight: 10,marginTop:10, }]}>{currentProfile && currentProfile!.preferredName}</Text>
+                      }
+                    </View>
+                </View>
+                      {/* Preferred Name */}
+                      <View style={[layout.row, layout.itemSection]}>
+                    <View style={[layout.column,]}>
+                        <Text style={[styles.text, { color: "#AEB5BC", fontSize: 16, marginRight: 10 }]}>Job Title</Text>
+
+                      {editingMode ?  
+                      <TextInput
+                            //  onFocus={handleFocus}
+                            //  onBlur={handleBlur}
+                            style={[styles.input, { borderBottomColor: '#888888' }]}
+                            // mode="outlined"
+                            // label="Email Address"
+                            placeholder={"CEO"}
+                            value={currentProfile ? currentProfile!.jobTitle : ''}
+
+                            onChangeText={(txt: string) => updateCurrentProfile({ ...currentProfile!, jobTitle: txt })}
+                            // theme={inputTheme}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                      /> :
+
+                      <Text style={[styles.text, { color: "black", fontSize: 16, marginRight: 10,marginTop:10, }]}>{currentProfile && currentProfile!.jobTitle}</Text>
+                      }
+                    </View>
+                </View>
+                      {/* Preferred Name */}
+                      <View style={[layout.row, layout.itemSection]}>
+                    <View style={[layout.column,]}>
+                        <Text style={[styles.text, { color: "#AEB5BC", fontSize: 16, marginRight: 10 }]}>Company</Text>
+
+                      {editingMode ?  
+                      <TextInput
+                            //  onFocus={handleFocus}
+                            //  onBlur={handleBlur}
+                            style={[styles.input, { borderBottomColor: '#888888' }]}
+                            // mode="outlined"
+                            // label="Email Address"
+                            placeholder={"Facebook"}
+                            value={currentProfile ? currentProfile!.company : ''}
+
+                            onChangeText={(txt: string) => updateCurrentProfile({ ...currentProfile!, company: txt })}
+                            // theme={inputTheme}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                      /> :
+
+                      <Text style={[styles.text, { color: "black", fontSize: 16, marginRight: 10,marginTop:10, }]}>{currentProfile && currentProfile!.company}</Text>
+                      }
+                    </View>
+                </View>
+                      {/* Preferred Name */}
+                      <View style={[layout.row, layout.itemSection]}>
+                    <View style={[layout.column,]}>
+                        <Text style={[styles.text, { color: "#AEB5BC", fontSize: 16, marginRight: 10 }]}>School</Text>
+
+                      {editingMode ?  
+                      <TextInput
+                            //  onFocus={handleFocus}
+                            //  onBlur={handleBlur}
+                            style={[styles.input, { borderBottomColor: '#888888' }]}
+                            // mode="outlined"
+                            // label="Email Address"
+                            placeholder={"Yale"}
+                            value={currentProfile ? currentProfile!.school : ''}
+
+                            onChangeText={(txt: string) => updateCurrentProfile({ ...currentProfile!, school: txt })}
+                            // theme={inputTheme}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                      /> :
+
+                      <Text style={[styles.text, { color: "black", fontSize: 16, marginRight: 10,marginTop:10, }]}>{currentProfile && currentProfile!.school}</Text>
+                      }
+                    </View>
+                </View>
             </ScrollView>
+
+
+
         </View>
     );
 }
@@ -493,7 +828,7 @@ const styles = StyleSheet.create({
     profileContent: {
         flex: 1,
         flexDirection: 'column',
-        paddingHorizontal: 20,
+        // paddingHorizontal: 20,
         paddingTop: 20,
         marginTop: 10
     },
@@ -533,6 +868,22 @@ const styles = StyleSheet.create({
         marginTop: 24,
         marginHorizontal: 16
     },
+    inputBox: {
+        // borderTopColor: 'transparent',
+        // borderLeftWidth: 0,
+        // borderRightWidth: 0,
+        minHeight: 100,
+        marginVertical: 20,
+        fontSize: 14,
+        padding: 10,
+        paddingHorizontal: 5,
+        fontFamily: 'Open Sans',
+        // backgroundColor:'white',
+        borderColor: '#888888',
+        borderWidth: .3,
+        borderRadius: 8,
+        // overflow:'hidden'
+    },
     mainInfo: {
         color: "#52575D",
         fontFamily: 'Open Sans',
@@ -565,6 +916,20 @@ const styles = StyleSheet.create({
         backgroundColor: 'transparent',
         height: Dimensions.get('screen').width * .75,
         // top:0,
+        // overflow:'hidden'
+    },
+    input: {
+        borderTopColor: 'transparent',
+        borderLeftWidth: 0,
+        borderRightWidth: 0,
+        marginVertical: 20,
+        fontSize: 14,
+        padding: 10,
+        paddingHorizontal: 5,
+        fontFamily: 'Open Sans',
+        // backgroundColor:'white',
+        borderBottomColor: '#888888',
+        borderBottomWidth: .3
         // overflow:'hidden'
     },
     screen: {
@@ -667,7 +1032,46 @@ const styles = StyleSheet.create({
         borderRadius: 6,
         marginTop: 3,
         marginRight: 20
+    },
+    modalContainer: {
+        backgroundColor: '#2200001C',
+        flex: 1,
+        justifyContent: 'flex-end'
+    },
+    modalWrapper: {
+        paddingHorizontal: 30,
+        paddingVertical: 10
+    },
+    warning: {
+        fontSize: 12,
+        fontFamily: 'Open Sans',
+        textAlign: 'center'
+    },
+    actionWrapper: {
+        flexDirection: 'row',
+    },
+    actionButton: {
+        width: '50%',
+        padding: 20,
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    actionText: {
+        fontSize: 14,
+        fontFamily: 'Open Sans'
     }
+});
+
+
+const DeleteButtonView = posed.View({
+    enter: {
+        y: 0, opacity: 1,
+        transition: {
+            type: 'spring',
+            useNativeDriver: true
+        }
+    },
+    exit: { y: 380, opacity: 0 }
 });
 
 export default Profile

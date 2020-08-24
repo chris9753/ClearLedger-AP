@@ -10,14 +10,15 @@ import CompleteAccountCreation from './intro/CompleteAccountCreation';
 import PublicProfile from './main/PublicProfile';
 import Profile from './main/Profile';
 import User from '../entities/users/model'
-import { ProfileComplete } from '../contexts/profile'
+import { ProfileSetup } from '../contexts/auth'
 import { forFade } from '../animations/stack';
 // Before rendering any navigation stack
 import { enableScreens } from 'react-native-screens';
 import { TransitionSpec } from '@react-navigation/stack/lib/typescript/src/types';
-import { Profile as ProfileModel } from 'src/entities/profiles/model';
-import { Connection as ConnectionModel } from 'src/entities/connections/model'
-import { Chat as ChatModel } from 'src/entities/chats/model'
+import { Profile as ProfileModel } from '../entities/profiles/model';
+import {ProfileService} from '../entities/profiles/service'
+import { Connection as ConnectionModel } from '../entities/connections/model'
+import { Chat as ChatModel } from '../entities/chats/model'
 import { useProfile, useConnections, useChats } from '../util/firebase';
 import Dashboard from './main/connections/Dashboard';
 import ChatScreen from './main/connections/ChatScreen';
@@ -50,72 +51,72 @@ function SignedInStack() {
       useNativeDriver: true
     }
   } as TransitionSpec
-  const [profileCompleted, _] = ProfileComplete.useData()
+  
   function main() {
     return <ProfileContext.Provider value={profile}>
       <ConnectionsContext.Provider value={connection}>
-      <ChatContext.Provider value={chats}>
+        <ChatContext.Provider value={chats}>
 
-        <NavigationContainer>
-          <Stack.Navigator
+          <NavigationContainer>
+            <Stack.Navigator
 
-            screenOptions={{
-              headerShown: false,
-              headerStyle: {
-                backgroundColor: theme.colors.light.primary,
-              },
-              headerTintColor: theme.colors.light.accent,
-            }
-            }
-
-          >
-            <Stack.Screen
-              name="Wander"
-              component={Wander}
-
-            />
-            <Stack.Screen
-              name="Profile"
-              component={Profile}
-              options={{
-                transitionSpec: {
-                  open: config,
-                  close: config,
+              screenOptions={{
+                headerShown: false,
+                headerStyle: {
+                  backgroundColor: theme.colors.light.primary,
                 },
-                animationEnabled: true
-              }}
+                headerTintColor: theme.colors.light.accent,
+              }
+              }
 
-            />
+            >
+              <Stack.Screen
+                name="Wander"
+                component={Wander}
 
-            <Stack.Screen
-              name="Dashboard"
-              component={Dashboard}
-              options={{
-                transitionSpec: {
-                  open: config,
-                  close: config,
-                },
-                animationEnabled: true
-              }}
+              />
+              <Stack.Screen
+                name="Profile"
+                component={Profile}
+                options={{
+                  transitionSpec: {
+                    open: config,
+                    close: config,
+                  },
+                  animationEnabled: true
+                }}
 
-            />
-            <Stack.Screen
-              name="PublicProfile"
-              component={PublicProfile}
-              options={{ cardStyleInterpolator: forFade }}
+              />
+
+              <Stack.Screen
+                name="Dashboard"
+                component={Dashboard}
+                options={{
+                  transitionSpec: {
+                    open: config,
+                    close: config,
+                  },
+                  animationEnabled: true
+                }}
+
+              />
+              <Stack.Screen
+                name="PublicProfile"
+                component={PublicProfile}
+                options={{ cardStyleInterpolator: forFade }}
 
 
-            />
-            <Stack.Screen
-              name="ChatScreen"
-              component={ChatScreen}
-              options={{ cardStyleInterpolator: forFade }}
+              />
+              <Stack.Screen
+                name="ChatScreen"
+                component={ChatScreen}
+                options={{ cardStyleInterpolator: forFade }}
 
 
-            />
-            <Stack.Screen name="Settings" component={Settings} />
-          </Stack.Navigator>
-        </NavigationContainer>
+              />
+              <Stack.Screen name="Settings" component={Settings} />
+            </Stack.Navigator>
+          </NavigationContainer>
         </ChatContext.Provider>
       </ConnectionsContext.Provider>
     </ProfileContext.Provider>
@@ -123,7 +124,8 @@ function SignedInStack() {
 
   }
   function intro() {
-    return <NavigationContainer>
+    return <ProfileContext.Provider value={profile}>
+      <NavigationContainer>
       <Stack.Navigator
         screenOptions={{
 
@@ -138,15 +140,19 @@ function SignedInStack() {
           headerTintColor: theme.colors.light.text.heading,
         }}
       >
-        <Stack.Screen
-          name="CompleteAccountCreation"
-          component={CompleteAccountCreation}
-        />
+        
+          <Stack.Screen
+            name="CompleteAccountCreation"
+            component={CompleteAccountCreation}
+          />
+       
+
       </Stack.Navigator>
     </NavigationContainer>
+    </ProfileContext.Provider>
   }
-
-  return User()?.isUserComplete() && !profileCompleted ? intro() : main()
+      const profileservice = new ProfileService(profile as any)
+  return !User()?.isUserComplete() || profileservice.profileSetupStage() < 2 ? intro() : main()
 }
 
 export default SignedInStack

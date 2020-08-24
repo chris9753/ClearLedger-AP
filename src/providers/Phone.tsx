@@ -223,7 +223,7 @@ function Phone() {
       <View style={[layout.full,layout.cta]}>
           <CustomButton  
         textColor={'#fff'}
-        color={'#F11856'}
+        color={'#0A0F3D'}
         solid={true}
         disabled={!isValid()}
         loading={loading}

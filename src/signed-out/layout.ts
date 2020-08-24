@@ -10,6 +10,19 @@ export default StyleSheet.create({
     cta: {
       marginTop:25
     },
+    itemSection: {
+      borderBottomColor:'#A6A6A6',
+      borderBottomWidth:1, 
+      padding:20,
+    },
+    firstItemSection:{
+      borderBottomColor:'#A6A6A6',
+      borderBottomWidth:1, 
+      borderTopColor:'#A6A6A6',
+      borderTopWidth:1,
+      padding:20
+    },
+
     row: {
         backgroundColor:"transparent",
       flexDirection: 'row'

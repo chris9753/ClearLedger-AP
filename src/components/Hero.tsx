@@ -10,7 +10,7 @@ interface Props {
   centered?:boolean;
 }
 
-function InAppHeader({colors,style,children,centered}: Props) {
+function InAppHeader({colors,style,children,centered = false}: Props) {
   return (
     // <View style={[style]}>
       
@@ -40,13 +40,14 @@ const styles = StyleSheet.create({
     marginHorizontal:25,
     flexDirection:'row',
     justifyContent:'space-between',
-    // alignItems:'center',
+    alignItems:'center',
     // alignContent:'center',
  
   },
   contentCentered: {
     flexDirection:'row',
-    justifyContent:'center'
+    justifyContent:'center',
+    alignItems:'center',
   },
   AndroidSafeArea: {
     flex: 0,

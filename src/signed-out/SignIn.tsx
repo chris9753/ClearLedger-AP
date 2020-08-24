@@ -8,6 +8,8 @@ import ProviderButton from '../components/ProviderButton';
 import EmailPassword from '../providers/EmailPassword';
 import Facebook from '../providers/Facebook';
 import theme from '../theme'
+// @ts-ignore
+import Video from "react-native-video";
 import layout from './layout';
 interface Props {
   navigation: NavigationParams;
@@ -16,7 +18,17 @@ interface Props {
 function SignIn({ navigation }: Props) {
   return (
     <View style={layout.container}>
-      <View style={layout.main}>
+       <Video
+          source={require("../../assets/images/bg.mp4")}
+          style={styles.backgroundVideo}
+          muted={true}
+          repeat={true}
+          resizeMode={"cover"}
+          rate={1.0}
+          ignoreSilentSwitch={"obey"}
+        />
+      {/* <Image source={require('../../assets/images/login.gif')} style={{flex:1,resizeMode:'cover',width:Dimensions.get('screen').width,height:Dimensions.get('screen').height}}></Image> */}
+      <View style={[layout.main,{position:'absolute',left:0,right:0,bottom:0,marginHorizontal:0,paddingTop:50,paddingBottom:50,borderTopLeftRadius:60,borderTopRightRadius:60}]}>
         {/* HEADING */}
         <View style={[layout.row, layout.header]}>
           <View style={layout.column}>
@@ -30,9 +42,7 @@ function SignIn({ navigation }: Props) {
             </Text>
           </View>
         </View>
-        <View style={[styles.carousel, layout.column]}>
-          <Image style={styles.image} resizeMode="contain" source={require('../../assets/images/card_poster.png')} />
-        </View>
+      
         {/*  Warning */}
         <View style={[layout.row,layout.warningBox]}>
           <View style={layout.column}>
@@ -49,7 +59,7 @@ function SignIn({ navigation }: Props) {
         </View>
         {/* ACTION BUTTONS */}
 
-        <View style={[layout.column, layout.full, layout.cta]}>
+        <View style={[layout.column, layout.cta,{width:'70%'}]}>
           <Facebook />
           <ProviderButton
             type="phone"
@@ -66,13 +76,22 @@ function SignIn({ navigation }: Props) {
   );
 }
 let deviceHeight = Dimensions.get('window').height
+const { width, height } = Dimensions.get("window");
 const styles = StyleSheet.create({
 
   carousel: {
     // alignItems:'center'
     marginVertical: 30
   },
-
+  backgroundVideo: {
+    height: height,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    alignItems: "stretch",
+    bottom: 0,
+    right: 0
+  },
   image: {
     // width:300
     height: deviceHeight * .32,

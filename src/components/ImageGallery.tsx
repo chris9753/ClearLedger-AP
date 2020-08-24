@@ -1,11 +1,12 @@
 import React, { Fragment, useState, Ref, forwardRef, useImperativeHandle, useRef, MutableRefObject, useLayoutEffect, useEffect, useMemo } from 'react';
-import {StyleSheet, View, ImageStyle } from 'react-native';
+import {StyleSheet, View, ImageStyle,Text } from 'react-native';
 import { TouchableWithoutFeedback } from 'react-native-gesture-handler';
 import FastImage from 'react-native-fast-image'
 import { useLayoutDimension } from '../util/layout'
 import LinearGradient from 'react-native-linear-gradient';
 import { prefetchImages } from '../util/helpers';
 import {Image} from "react-native-expo-image-cache";
+
 interface Props {
     images: any[]
     imageStyle?: ImageStyle
@@ -100,14 +101,18 @@ function TappableImageGallery({ images, imageStyle, id, onIndexChange = () => {}
         {slits()}
                             
         </View>
+{images.length > 0 ? 
+    <Image
+    key={images[galleryIndex].uri}
+    style={imageStyle ? imageStyle : styles.image}
+    preview={images[galleryIndex].preview ? images[galleryIndex].preview : null }
+    uri={images[galleryIndex].uri}
 
-        <Image
-            key={images[galleryIndex].uri}
-            style={imageStyle ? imageStyle : styles.image}
-            preview={images[galleryIndex].preview ? images[galleryIndex].preview : null }
-            uri={images[galleryIndex].uri}
-
-        />
+/>
+:
+null
+}
+    
 
     </Fragment>
 }
