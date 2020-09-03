@@ -66,6 +66,11 @@ function SignIn({ navigation }: Props) {
             onPress={() => navigation.navigate('PhoneSignIn')}>
             Sign in with phone number
         </ProviderButton>
+        <ProviderButton
+            type="email"
+            onPress={() => navigation.navigate('EmailSignIn')}>
+            Sign in with Email
+        </ProviderButton>
         </View>
 
       </View>

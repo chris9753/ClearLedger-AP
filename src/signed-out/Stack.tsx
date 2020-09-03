@@ -3,6 +3,7 @@ import {NavigationContainer} from '@react-navigation/native';
 import {createStackNavigator} from '@react-navigation/stack';
 import ForgotPassword from './ForgotPassword';
 import PhoneSignIn from './PhoneSignIn';
+import EmailSignIn from './EmailSignIn';
 import SignIn from './SignIn';
 import theme from '../theme'
 import { StyleSheet, TouchableWithoutFeedback, Button, View,TouchableOpacity,Dimensions } from 'react-native';
@@ -40,6 +41,7 @@ function SignedOutStack() {
         />
   
         <Stack.Screen name="PhoneSignIn" component={PhoneSignIn} />
+        <Stack.Screen name="EmailSignIn" component={EmailSignIn} />
       </Stack.Navigator>
     </NavigationContainer>
   );

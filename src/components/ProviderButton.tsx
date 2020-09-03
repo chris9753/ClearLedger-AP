@@ -4,7 +4,7 @@ import {Button} from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import CustomButton from './CustomButton';
 
-type SocialType = 'facebook' | 'google' | 'phone';
+type SocialType = 'facebook' | 'google' | 'phone' | 'email' ;
 
 interface Props {
   style?: ViewStyle;
@@ -20,13 +20,15 @@ function getSocialColor(type: SocialType): string {
       return '#0F29AC';
     case 'google':
       return '#F96458';
-    case 'phone':
+    case 'phone' :
       return '#1B1464';
+      default :
+      return '#1B1464'
   }
 }
 
 function ProviderButton({style, type, onPress, loading, children}: Props) {
-  if(type === 'phone' ) {
+  if(type === 'phone' || type === 'email'  ) {
     return (
     <CustomButton  
     // icon={() => <Icon name={type} color="#fff" size={17} />}

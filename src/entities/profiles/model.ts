@@ -14,7 +14,7 @@ export interface Settings {
     ageRange:Range,
     desiredSex:DesiredSex
 }
-export type sex = 'M' | 'F'
+export type sex = 'M' | 'F' | 'A'
 
 export type DesiredSex = sex[]
 
@@ -23,23 +23,33 @@ export interface Range {
     end:number,
     
 }
+export interface NotificationPrefences {
+    on:boolean;
+}
 export interface Profile {
     desiredSex:DesiredSex;
     ageRange:Range;
+    hosting:boolean;
     uid?:string;
-    interests?:any[]
+    notifications:NotificationPrefences;
+    maximumDistance:number;
+    interests?:any[];
     age: number;
     name:string;
     email:string;
+    defaultLanguage:string;
+    showAge:boolean;
+    showProfile:boolean;
     bio?:string;
-    liked?:userAt[]
-    likedBy?:userAt[],
-    height:number,
-    preferredName?:string,
-    languages:string[],
-    jobTitle?:string,
-    company?:string,
-    school?:string,
+    liked?:userAt[];
+    likedBy?:userAt[];
+    height:number;
+    preferredLanguage?:string;
+    preferredName?:string;
+    languages:string[];
+    jobTitle?:string;
+    company?:string;
+    school?:string;
     homeLocation:Location;
     placesToGo?:Location[];
     placesBeen:Location[];
