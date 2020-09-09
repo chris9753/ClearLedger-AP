@@ -6,6 +6,7 @@ import layout from '../signed-out/layout';
 import CustomButton from '../components/CustomButton';
 import firestore from '@react-native-firebase/firestore';
 import {AuthCredential, ProfileSetup} from '../contexts/auth'
+import { TouchableOpacity } from 'react-native-gesture-handler';
 function EmailPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -139,7 +140,7 @@ function EmailPassword() {
   
   }
   function link() {
-    return <View style={[layout.main, styles.contentArea,{justifyContent:'flex-start'}]}>
+    return <View style={[ styles.contentArea,{justifyContent:'flex-start'}]}>
      <View style={[layout.row, layout.header]}>
        <View style={layout.column}>
          <Text style={layout.heading}>
@@ -155,7 +156,7 @@ function EmailPassword() {
        style={styles.input}
        // mode="outlined"
        // label="Email Address"
-       placeholder={"I screwed this up"}
+       placeholder={"Email address"}
        value={email}
        onChangeText={setEmail}
        // theme={inputTheme}
@@ -200,6 +201,12 @@ function EmailPassword() {
      >
        {loading ? 'Creating Account' : 'Create Account'}
      </CustomButton>
+<TouchableOpacity onPress={() => setSigningUp(false)} >
+<Text style={[layout.heading,{fontSize:16}]}>
+          Already have an account?
+         </Text>
+</TouchableOpacity>
+    
    </View>
    </>
    
@@ -207,8 +214,69 @@ function EmailPassword() {
    
    </View>
    }
-  return <View style={[layout.container, { justifyContent: 'flex-start' }]}>
-    {signingUp ? link() : null}
+
+   function signIn() {
+    return <View style={[styles.contentArea,{justifyContent:'flex-start'}]}>
+     <View style={[layout.row, layout.header]}>
+       <View style={layout.column}>
+         <Text style={layout.heading}>
+          Sign in with email
+         </Text>
+       </View>
+     </View>
+ 
+   <>
+   
+   <View style={[layout.full]}>
+     <TextInput
+       style={styles.input}
+       // mode="outlined"
+       // label="Email Address"
+       placeholder={"Email address"}
+       value={email}
+       onChangeText={setEmail}
+       // theme={inputTheme}
+       keyboardType="email-address"
+       autoCapitalize="none"
+       autoCorrect={false}
+     />
+     <TextInput
+       secureTextEntry
+       style={styles.input}
+       // mode="outlined"
+       // label="Password"
+       placeholder={"Password"}
+       value={password}
+       onChangeText={setPassword}
+     // theme={inputTheme}
+     />
+   </View>
+   
+   <HelperText type="error" visible={!!help}>
+     {help}
+   </HelperText>
+   <View style={[layout.full, layout.cta]}>
+     
+     <CustomButton
+       textColor={'#fff'}
+       color={'#1B1464'}
+       solid={true}
+       loading={loading}
+       onPress={() => (loading ? null : attemptSignIn())}
+       disabled={!email || !password || !!help}
+     >
+       {loading ? 'Sign In' : 'Sign In'}
+     </CustomButton>
+   </View>
+   </>
+   
+   
+   
+   </View>
+   }
+
+  return <View style={[ { justifyContent: 'flex-start' }]}>
+    {signingUp ? link() : signIn()}
   </View>
 }
 

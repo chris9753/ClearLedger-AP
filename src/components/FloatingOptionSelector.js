@@ -73,20 +73,20 @@ export default class FloatingOptionSelector extends React.Component {
         console.log(desiredSex)
         return (
             <View style={[styles.container, this.props.style]}>
-                <TouchableWithoutFeedback>
+                <TouchableWithoutFeedback onPress={() => this.props.onSelected('A')}>
                     <Animated.View style={[styles.button, styles.secondary, desiredSex.includes('A') ? {backgroundColor:"black"}  : {},heartStyle, opacity]}>
                     <FontAwesome5 name="genderless" size={20} color="#6026BC" />
                     </Animated.View>
                 </TouchableWithoutFeedback>
 
-                <TouchableWithoutFeedback>
+                <TouchableWithoutFeedback onPress={() => this.props.onSelected('F')}>
                     <Animated.View style={[styles.button, styles.secondary, desiredSex.includes('F') ? {backgroundColor:"black"}  : {}, thumbStyle, opacity]}>
                         
                         <Icon name="venus" size={20} color="#6026BC" />
                     </Animated.View>
-                </TouchableWithoutFeedback>
+                </TouchableWithoutFeedback >
 
-                <TouchableWithoutFeedback>
+                <TouchableWithoutFeedback onPress={() => this.props.onSelected('M')}>
                     <Animated.View style={[styles.button,styles.secondary, desiredSex.includes('M') ? {backgroundColor:"black"}  : {}, pinStyle, opacity]}>
                         <Icon name="mars" size={20} color="#6026BC" />
                     </Animated.View>

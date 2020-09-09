@@ -84,6 +84,16 @@ function Settings({ navigation }: Props) {
       setChoosingLanguage(false);
     await updateProfile({defaultLanguage:language.value} as any)
   }
+  const genderSelected = async (gender:string) => {
+      let found = profile!.desiredSex.includes(gender as any)
+      if(found) {
+        await updateProfile({desiredSex:profile!.desiredSex.filter(x => x != gender)} as any)
+      } else {
+        await updateProfile({desiredSex:[...profile!.desiredSex,gender]} as any)
+      }
+   
+  }
+
   async function handlePassword() {
     if (!user || !user.email) {
       return;
@@ -167,7 +177,7 @@ function Settings({ navigation }: Props) {
           }
           return <Icon name="genderless" size={20} color="#6026BC" />
         }) : null}
-        <FloatingOptionSelector desiredSex={profile?.desiredSex} style={[styles.messageIconWrapper, { position: 'relative' }]}></FloatingOptionSelector>
+        <FloatingOptionSelector onSelected={genderSelected} desiredSex={profile?.desiredSex} style={[styles.messageIconWrapper, { position: 'relative' }]}></FloatingOptionSelector>
       </View>
       <View style={[layout.row, layout.itemSection, { justifyContent: 'center', alignContent: 'center', alignItems: 'center', paddingHorizontal: 50, paddingTop: 40 }]}>
 
