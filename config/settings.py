@@ -1,0 +1,1 @@
+# Stores environment variables (API keys, file paths, thresholds).
