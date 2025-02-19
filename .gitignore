@@ -119,3 +119,6 @@ cython_debug/
 
 # VS Code
 .vscode/
+
+# context_info.txt
+context_info.txt
