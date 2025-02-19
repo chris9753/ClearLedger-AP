@@ -1,1 +1,1 @@
-# validation_schema.py
+# Defines what a "valid" invoice looks like.
