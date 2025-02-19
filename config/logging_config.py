@@ -1,1 +1,1 @@
-# logging_config.py
+# structured logging
