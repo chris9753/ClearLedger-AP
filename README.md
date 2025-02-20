@@ -156,15 +156,29 @@ Establish a solid foundation for the 10-day development process.
     }
     ```
 
-    ## 🚀 Setup Guide
+- Implemented a human-in-the-loop verification UI in **api/review_api.py** using FastAPI. This provides endpoints for retrieving review requests and submitting manual corrections, leveraging a "veteran reviewer" prompt for LLM-assisted review.
 
-    ### Dependencies
-    ```bash
-    pip install -r requirements.txt
-    ```
+- Updated **agents/extractor_agent.py** to enhance the LLM prompt. The prompt now enforces JSON-only output for improved parsing reliability, particularly for challenging invoices (e.g. invoices missing a product code).
 
-    ### Key Packages
-    - `langchain==0.2.16`
+- Added a FAISS-based RAG integration module in **data_processing/rag_helper.py**. This module stores error invoices and classifies new invoices by similarity, reducing unnecessary human intervention.
+
+- Continued to leverage verbose logging for debugging and performance tracking across the system.
+
+## Overall Project Structure
+
+- **agents/**: Implements various agents including extraction, validation, matching, human review, and fallback.
+- **api/**: Provides RESTful APIs including endpoints for human review (e.g., **review_api.py**).
+- **data_processing/**: Contains modules for document parsing, OCR, confidence scoring, anomaly detection, and RAG integration.
+
+## 🚀 Setup Guide
+
+### Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### Key Packages
+- `langchain==0.2.16`
 - `langchain_community==0.2.16`
 - `pdfplumber>=0.10.0`
 - `pytesseract>=0.3.10`
@@ -189,6 +203,11 @@ ollama run mistral:7b "test"
 ```bash
 python workflows/orchestrator.py
 ```
+
+
+## Next Steps
+
+Proceed to implement additional Day 6 deliverables focusing on UI enhancements and edge-case handling.
 
 ## 🔜 Next Steps
 ### Remaining Tasks (Days 3-10):
