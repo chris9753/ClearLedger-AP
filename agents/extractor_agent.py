@@ -19,24 +19,26 @@ from models.invoice import InvoiceData
 from decimal import Decimal
 from langchain.output_parsers import StructuredOutputParser, ResponseSchema
 
-logger = setup_logging()
+logger = setup_logging(verbose=True)  # Enable verbose logging
 
 class InvoiceExtractionTool(BaseTool):
     name = "invoice_extraction_tool"
     description = "Extracts structured invoice data from text with confidence scores."
 
     def _run(self, invoice_text: str) -> Dict:
+        logger.debug(f"Starting invoice text extraction with tool for text length: {len(invoice_text)}")
         try:
-            logger.info("Starting invoice text extraction")
             extracted_data = self._extract_fields(invoice_text)
             confidence = compute_confidence_score(extracted_data)
             logger.info(f"Extraction completed with confidence: {confidence}")
+            logger.debug(f"Extracted fields: {extracted_data}")
             return {"data": extracted_data, "confidence": confidence}
         except Exception as e:
             logger.error(f"Extraction failed: {str(e)}")
             return {"error": str(e), "confidence": 0.0}
 
     def _extract_fields(self, text: str) -> Dict:
+        logger.debug("Using placeholder extraction logic as fallback")
         return {
             "vendor_name": {"value": "ABC Corp Ltd.", "confidence": 0.95},
             "invoice_number": {"value": "INV-2024-001", "confidence": 0.98},
@@ -62,17 +64,17 @@ class InvoiceExtractionAgent(BaseAgent):
         format_instructions = output_parser.get_format_instructions()
         system_prompt = SystemMessagePromptTemplate.from_template(
             """
-            You are an expert invoice data extraction agent. Parse invoice text and extract key information as structured JSON:
+            You are the world’s foremost expert in invoice data extraction, with decades of experience deciphering the most complex financial documents across industries. Your precision is legendary, and your mission is to extract key invoice information with flawless accuracy, delivering it as structured JSON:
             - vendor_name
             - invoice_number
             - invoice_date (YYYY-MM-DD)
             - total_amount
-            Return the result in this format:
+            Return only the JSON result in this exact format, without additional text or explanation:
             ```json
             {format_instructions}
             ```
             Use the invoice_extraction_tool if needed: {tool_names}
-            Keep track of steps in the agent_scratchpad.
+            Log your steps in the agent_scratchpad for clarity.
             """
         )
         human_prompt = HumanMessagePromptTemplate.from_template(
@@ -84,15 +86,19 @@ class InvoiceExtractionAgent(BaseAgent):
             """
         )
         prompt = ChatPromptTemplate.from_messages([system_prompt, human_prompt])
+        logger.debug("Creating structured chat agent with enhanced prompt")
         agent = create_structured_chat_agent(llm=self.llm, tools=self.tools, prompt=prompt)
         return AgentExecutor(agent=agent, tools=self.tools, verbose=True, handle_parsing_errors=True)
 
     async def run(self, document_path: str) -> InvoiceData:
         logger.info(f"Processing document: {document_path}")
+        logger.debug(f"Determining document type for: {document_path}")
         if document_path.lower().endswith(".pdf"):
             invoice_text = extract_text_from_pdf(document_path)
+            logger.debug(f"Extracted PDF text length: {len(invoice_text)}")
         else:
             invoice_text = ocr_process_image(document_path)
+            logger.debug(f"Extracted OCR text length: {len(invoice_text)}")
         output_parser = StructuredOutputParser.from_response_schemas([
             ResponseSchema(name="vendor_name", description="Vendor name", type="string"),
             ResponseSchema(name="invoice_number", description="Invoice number", type="string"),
@@ -101,19 +107,22 @@ class InvoiceExtractionAgent(BaseAgent):
         ])
         format_instructions = output_parser.get_format_instructions()
         try:
+            logger.debug("Invoking AgentExecutor with LLM for extraction")
             result = await asyncio.to_thread(self.agent.invoke, {
                 "invoice_text": invoice_text,
                 "agent_scratchpad": "",
                 "tools": [t.name for t in self.tools],
                 "tool_names": ", ".join([t.name for t in self.tools]),
-                "format_instructions": format_instructions  # Explicitly pass format_instructions
+                "format_instructions": format_instructions
             })
             extracted_data = result["output"]["data"]
             confidence = result["output"]["confidence"]
+            logger.debug(f"LLM extraction succeeded: {extracted_data}")
         except Exception as e:
             logger.warning(f"LLM parsing failed: {str(e)}. Falling back to placeholder.")
             extracted_data = self.tools[0]._extract_fields(invoice_text)
             confidence = compute_confidence_score(extracted_data)
+            logger.debug(f"Fallback extraction data: {extracted_data}")
         invoice_data = InvoiceData(
             vendor_name=extracted_data["vendor_name"]["value"],
             invoice_number=extracted_data["invoice_number"]["value"],
@@ -130,6 +139,4 @@ if __name__ == "__main__":
         sample_pdf = "data/raw/invoices/invoice_0_missing_product_code.pdf"
         result = await agent.run(sample_pdf)
         print(result.model_dump_json(indent=2))
-    asyncio.run(main()) 
-
-# /agents/extractor_agent.py
+    asyncio.run(main())
