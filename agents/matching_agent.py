@@ -6,11 +6,9 @@ import logging
 import asyncio
 import pandas as pd
 from fuzzywuzzy import fuzz
-from config.logging_config import setup_logging
+from config.logging_config import logger  # Import singleton logger
 from agents.base_agent import BaseAgent
 from models.invoice import InvoiceData
-
-logger = setup_logging(verbose=True)  # Enable verbose logging
 
 class PurchaseOrderMatchingAgent(BaseAgent):
     def __init__(self, po_file="data/raw/vendor_data.csv"):
@@ -65,14 +63,6 @@ class PurchaseOrderMatchingAgent(BaseAgent):
             logger.debug("No matches found above threshold")
         logger.info(f"Matching result: {result}")
         return result
-
-# Prompt for future LLM use:
-"""
-You are a seasoned procurement specialist with unmatched expertise in aligning invoices with purchase orders across global supply chains. Match this invoice to existing POs with pinpoint accuracy, using vendor name similarity, and return a structured JSON result:
-- status: 'matched' or 'unmatched'
-- po_number: matched PO number or null
-- match_confidence: confidence score (0.0 to 1.0)
-"""
 
 if __name__ == "__main__":
     async def main():
