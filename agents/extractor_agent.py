@@ -5,7 +5,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from typing import Dict, Any
 from langchain.agents import AgentExecutor, create_structured_chat_agent
-from langchain_community.llms import Ollama  # Use local Mistral 7B
+from langchain_community.llms import Ollama
 from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from langchain.tools import BaseTool
 import logging
@@ -48,7 +48,7 @@ class InvoiceExtractionTool(BaseTool):
 class InvoiceExtractionAgent(BaseAgent):
     def __init__(self):
         super().__init__()
-        self.llm = Ollama(model="mistral:7b")  # Local Mistral 7B via Ollama
+        self.llm = Ollama(model="mistral:7b")
         self.tools = [InvoiceExtractionTool()]
         self.agent = self._create_extraction_agent()
 
@@ -71,7 +71,7 @@ class InvoiceExtractionAgent(BaseAgent):
         )
         prompt = ChatPromptTemplate.from_messages([system_prompt, human_prompt])
         agent = create_structured_chat_agent(llm=self.llm, tools=self.tools, prompt=prompt)
-        return AgentExecutor(agent=agent, tools=self.tools, verbose=True)
+        return AgentExecutor(agent=agent, tools=self.tools, verbose=True, handle_parsing_errors=True)  # Added error handling
 
     def run(self, document_path: str) -> InvoiceData:
         logger.info(f"Processing document: {document_path}")
