@@ -36,8 +36,8 @@ class InvoiceExtractionTool(BaseTool):
         if not text or not isinstance(text, str):
             logger.error("Invalid invoice text provided")
             return {}
-        
-        # Placeholder LLM logic (replace with actual parsing)
+
+        # Placeholder LLM logic (replace with actual parsing in future)
         fields = {
             "vendor_name": {"value": "Sample Vendor", "confidence": 0.95},
             "invoice_number": {"value": "INV12345", "confidence": 0.98},
