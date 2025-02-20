@@ -191,10 +191,43 @@ python workflows/orchestrator.py
 ```
 
 ## 🔜 Next Steps
-### Day 3
-- Implement human-in-the-loop UI with FastAPI
-- Enhance LLM parsing
-- Add RAG (FAISS) for edge cases
+### Remaining Tasks (Days 3-10):
 
-### Day 4
-- Add Streamlit frontend for invoice review
+#### Day 3:
+
+##### Refine error handling (async processing, retry mechanisms).
+##### Expand edge-case testing.
+##### Develop initial human-in-the-loop mechanism (CLI or basic UI).
+
+#### Day 4:
+
+##### Fully implement human-in-the-loop verification UI (FastAPI + Streamlit).
+##### Add API enhancements: authentication, caching, rate limiting.
+##### Enhance orchestrator with fallback strategies.
+##### Integrate comprehensive monitoring.
+
+#### Day 5:
+
+##### Develop a basic frontend UI (upload page, review panel, invoice table).
+##### Build API endpoints to support frontend interactions.
+##### Implement performance benchmarking and tracking.
+
+#### Day 6:
+
+##### Dockerize the application.
+##### Set up CI/CD pipelines.
+##### Plan and begin deployment strategy (AWS Lambda/GCP Cloud Run).
+##### Add post-processing analytics (dashboard, anomaly detection visualizations).
+
+#### Day 7:
+
+##### Write detailed documentation (README, architecture diagram, performance report).
+##### Conduct extensive unit, integration, and load testing.
+##### Final code refactoring and cleanup.
+
+#### Day 8:
+
+##### Run full end-to-end testing across the system.
+##### Optimize performance metrics and finalize benchmarks.
+##### Record the final video demo.
+##### Prepare final submission (push to GitHub, compile deliverables, draft submission email).
