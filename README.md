@@ -170,6 +170,56 @@ Establish a solid foundation for the 10-day development process.
 - **api/**: Provides RESTful APIs including endpoints for human review (e.g., **review_api.py**).
 - **data_processing/**: Contains modules for document parsing, OCR, confidence scoring, anomaly detection, and RAG integration.
 
+
+## ✅ Completed (Days 1–2)
+- InvoiceExtractionAgent: Mistral 7B integration, strict JSON parsing, and fallback mechanisms.
+- InvoiceValidationAgent: Validates extracted fields, handles anomalies, and flags errors.
+- PurchaseOrderMatchingAgent: Fuzzy matching with vendor_data.csv, handles mismatches.
+- Human Review API: FastAPI endpoints for manual invoice corrections.
+- FAISS-based RAG: Handles edge cases, indexes error-prone invoices for smarter future parsing.
+- Async Processing & Error Handling: Built-in retries, structured logging, and error tracking.
+
+## 🚀 Remaining Workflow (Days 3–10)
+
+### Day 3 – Frontend Development & Integration
+- Build a basic frontend using Streamlit or Next.js including:
+  - Invoice upload page
+  - Human review panel
+  - Processed invoice table
+- Integrate the frontend with backend APIs (e.g., review endpoints).
+- Implement performance benchmarking to track processing times, confidence scores, and resource usage.
+
+### Day 4 – Deployment & Post-Processing Analytics
+- **Dockerize** the application to containerize all dependencies.
+- Set up a **CI/CD Pipeline** using GitHub Actions for automated testing and deployment.
+- (Optional) Deploy the system using AWS Lambda or GCP Cloud Run.
+- Add post-processing analytics dashboard to visualize trends, anomalies, and key metrics.
+
+### Day 5 – Documentation & Comprehensive Testing
+- Write detailed documentation including:
+  - An updated README with setup instructions
+  - Architecture diagrams (using Mermaid.js or Draw.io)
+  - A performance report detailing token usage, processing times, and accuracy rates
+- Expand test coverage with unit, integration, and load tests, including edge case simulations (e.g., OCR errors, missing fields, duplicate invoices).
+- Final code refactoring and cleanup.
+
+### Day 6 – Finalization & Submission
+- Conduct full end-to-end testing of the entire pipeline on diverse invoice samples.
+- Optimize performance by fine-tuning retry logic, async processing, and FAISS indexing.
+- Record a video demo showcasing the system workflow, agent interactions, and performance highlights.
+- Prepare your final submission by:
+  - Pushing the polished code to GitHub
+  - Including all deliverables (documentation, video demo, diagrams)
+  - Drafting and sending the submission email.
+
+
+## ✅ Summary
+
+- **Days 1–2:** Core features implemented including extraction, validation, PO matching, error handling, and a human-in-the-loop review mechanism.
+- **Days 3–10:** Focus shifts to frontend development, deployment, comprehensive testing, and final documentation.
+
+---
+
 ## 🚀 Setup Guide
 
 ### Dependencies
@@ -203,52 +253,3 @@ ollama run mistral:7b "test"
 ```bash
 python workflows/orchestrator.py
 ```
-
-## ✅ Completed (Days 1–6)
-- InvoiceExtractionAgent: Mistral 7B integration, strict JSON parsing, and fallback mechanisms.
-- InvoiceValidationAgent: Validates extracted fields, handles anomalies, and flags errors.
-- PurchaseOrderMatchingAgent: Fuzzy matching with vendor_data.csv, handles mismatches.
-- Human Review API: FastAPI endpoints for manual invoice corrections.
-- FAISS-based RAG: Handles edge cases, indexes error-prone invoices for smarter future parsing.
-- Async Processing & Error Handling: Built-in retries, structured logging, and error tracking.
-
-## 🚀 Remaining Workflow (Days 7–10)
-
-### Day 7 – Frontend Development & Integration
-- Build a basic frontend using Streamlit or Next.js including:
-  - Invoice upload page
-  - Human review panel
-  - Processed invoice table
-- Integrate the frontend with backend APIs (e.g., review endpoints).
-- Implement performance benchmarking to track processing times, confidence scores, and resource usage.
-
-### Day 8 – Deployment & Post-Processing Analytics
-- **Dockerize** the application to containerize all dependencies.
-- Set up a **CI/CD Pipeline** using GitHub Actions for automated testing and deployment.
-- (Optional) Deploy the system using AWS Lambda or GCP Cloud Run.
-- Add post-processing analytics dashboard to visualize trends, anomalies, and key metrics.
-
-### Day 9 – Documentation & Comprehensive Testing
-- Write detailed documentation including:
-  - An updated README with setup instructions
-  - Architecture diagrams (using Mermaid.js or Draw.io)
-  - A performance report detailing token usage, processing times, and accuracy rates
-- Expand test coverage with unit, integration, and load tests, including edge case simulations (e.g., OCR errors, missing fields, duplicate invoices).
-- Final code refactoring and cleanup.
-
-### Day 10 – Finalization & Submission
-- Conduct full end-to-end testing of the entire pipeline on diverse invoice samples.
-- Optimize performance by fine-tuning retry logic, async processing, and FAISS indexing.
-- Record a video demo showcasing the system workflow, agent interactions, and performance highlights.
-- Prepare your final submission by:
-  - Pushing the polished code to GitHub
-  - Including all deliverables (documentation, video demo, diagrams)
-  - Drafting and sending the submission email.
-
-
-## ✅ Summary
-
-- **Days 1–6:** Core features implemented including extraction, validation, PO matching, error handling, and a human-in-the-loop review mechanism.
-- **Days 7–10:** Focus shifts to frontend development, deployment, comprehensive testing, and final documentation.
-
----
