@@ -9,12 +9,14 @@ from config.logging_config import setup_logging
 from agents.base_agent import BaseAgent
 from models.invoice import InvoiceData
 from models.validation_schema import ValidationResult
+from data_processing.anomaly_detection import AnomalyDetector
 
 logger = setup_logging()
 
 class InvoiceValidationAgent(BaseAgent):
     def __init__(self):
         super().__init__()
+        self.anomaly_detector = AnomalyDetector()
 
     def run(self, invoice_data: InvoiceData) -> ValidationResult:
         """Validate invoice data for errors, missing fields, and anomalies."""
@@ -46,9 +48,13 @@ class InvoiceValidationAgent(BaseAgent):
             except ValueError:
                 errors["invoice_date"] = "Invalid date format (expected YYYY-MM-DD)"
 
-        # Basic anomaly check: confidence too low
+        # Confidence check
         if invoice_data.confidence < 0.8:  # Adjustable threshold
             errors["confidence"] = f"Low confidence score: {invoice_data.confidence}"
+
+        # Anomaly detection
+        anomaly_errors = self.anomaly_detector.detect_anomalies(invoice_data)
+        errors.update(anomaly_errors)
 
         validation_result = ValidationResult(
             status="failed" if errors else "valid",
