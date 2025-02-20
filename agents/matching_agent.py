@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import logging
 import asyncio
 import pandas as pd
-from fuzzywuzzy import fuzz
+from fuzzywuzzy import fuzz  
 from config.logging_config import setup_logging
 from agents.base_agent import BaseAgent
 from models.invoice import InvoiceData
@@ -59,3 +59,17 @@ class PurchaseOrderMatchingAgent(BaseAgent):
             }
         logger.info(f"Matching result: {result}")
         return result
+
+if __name__ == "__main__":
+    async def main():
+        agent = PurchaseOrderMatchingAgent()
+        sample_data = InvoiceData(
+            vendor_name="ABC Corp Ltd.",
+            invoice_number="INV-2024-001",
+            invoice_date="2024-02-18",
+            total_amount="7595.00",
+            confidence=0.955
+        )
+        result = await agent.run(sample_data)
+        print(result)
+    asyncio.run(main())
