@@ -1,17 +1,14 @@
 # /workflows/orchestrator.py
-
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import logging
 import asyncio
-from config.logging_config import setup_logging
+from config.logging_config import logger  # Import singleton logger
 from agents.extractor_agent import InvoiceExtractionAgent
 from agents.validator_agent import InvoiceValidationAgent
 from agents.matching_agent import PurchaseOrderMatchingAgent
 from agents.human_review_agent import HumanReviewAgent
-
-logger = setup_logging(verbose=True)  # Enable verbose logging
 
 class InvoiceProcessingWorkflow:
     def __init__(self):
@@ -40,7 +37,6 @@ class InvoiceProcessingWorkflow:
         logger.info(f"Starting invoice processing for: {document_path}")
         logger.debug(f"Processing pipeline initiated for document: {document_path}")
 
-        # Step 1: Extract data
         try:
             extracted_data = await self._retry_with_backoff(lambda: self.extraction_agent.run(document_path))
             logger.info(f"Extraction completed: {extracted_data}")
@@ -48,7 +44,6 @@ class InvoiceProcessingWorkflow:
             logger.error(f"Extraction failed after retries: {str(e)}")
             return {"status": "error", "message": str(e)}
 
-        # Step 2: Validate extracted data
         try:
             validation_result = await self._retry_with_backoff(lambda: self.validation_agent.run(extracted_data))
             logger.info(f"Validation completed: {validation_result}")
@@ -64,7 +59,6 @@ class InvoiceProcessingWorkflow:
             logger.error(f"Validation failed after retries: {str(e)}")
             return {"status": "error", "message": str(e)}
 
-        # Step 3: Match with PO
         try:
             matching_result = await self._retry_with_backoff(lambda: self.matching_agent.run(extracted_data))
             logger.info(f"Matching completed: {matching_result}")
@@ -72,7 +66,6 @@ class InvoiceProcessingWorkflow:
             logger.error(f"Matching failed after retries: {str(e)}")
             return {"status": "error", "message": str(e)}
 
-        # Step 4: Human review
         try:
             review_result = await self._retry_with_backoff(lambda: self.review_agent.run(extracted_data, validation_result))
             logger.info(f"Review completed: {review_result}")
@@ -80,7 +73,6 @@ class InvoiceProcessingWorkflow:
             logger.error(f"Review failed after retries: {str(e)}")
             return {"status": "error", "message": str(e)}
 
-        # Compile result
         result = {
             "extracted_data": extracted_data.model_dump(),
             "validation_result": validation_result.model_dump(),
