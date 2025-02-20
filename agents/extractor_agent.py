@@ -90,6 +90,33 @@ class InvoiceExtractionAgent:
             return invoice_data
         except KeyError as e:
             raise ValueError(f"Missing field in extracted data: {str(e)}")
+        
+
+def _extract_fields(self, text: str) -> Dict:
+    import logging
+    from config.logging_config import setup_logging
+    logger = setup_logging()
+
+    if not text or not isinstance(text, str):
+        logger.error("Invalid invoice text provided")
+        return {}
+
+    # Placeholder LLM logic (replace with actual parsing)
+    fields = {
+        "vendor_name": {"value": "Sample Vendor", "confidence": 0.95},
+        "invoice_number": {"value": "INV12345", "confidence": 0.98},
+        "invoice_date": {"value": "2025-01-15", "confidence": 0.90},
+        "total_amount": {"value": 1500.00, "confidence": 0.99}
+    }
+
+    # Basic edge case checks
+    for field, data in fields.items():
+        if not data["value"]:
+            logger.warning(f"Missing or empty {field}")
+            data["confidence"] = 0.0
+
+    logger.info("Fields extracted successfully")
+    return fields
 
 if __name__ == "__main__":
     agent = InvoiceExtractionAgent()
