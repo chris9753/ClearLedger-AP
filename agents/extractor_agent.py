@@ -4,6 +4,7 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from typing import Dict, Any
+import asyncio
 from langchain.agents import AgentExecutor, create_structured_chat_agent
 from langchain_community.llms import Ollama
 from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
@@ -36,7 +37,7 @@ class InvoiceExtractionTool(BaseTool):
             return {"error": str(e), "confidence": 0.0}
 
     def _extract_fields(self, text: str) -> Dict:
-        # Placeholder fallback (remove reliance in Day 6)
+        # Placeholder as fallback
         return {
             "vendor_name": {"value": "ABC Corp Ltd.", "confidence": 0.95},
             "invoice_number": {"value": "INV-2024-001", "confidence": 0.98},
@@ -62,10 +63,10 @@ class InvoiceExtractionAgent(BaseAgent):
         system_prompt = SystemMessagePromptTemplate.from_template(
             """
             You are an expert invoice data extraction agent. Parse invoice text and extract key information as structured JSON:
-            - Vendor name
-            - Invoice number
-            - Invoice date (YYYY-MM-DD)
-            - Total amount
+            - vendor_name
+            - invoice_number
+            - invoice_date (YYYY-MM-DD)
+            - total_amount
             Return the result in this format:
             ```json
             {output_parser.get_format_instructions()}
@@ -116,8 +117,9 @@ class InvoiceExtractionAgent(BaseAgent):
         return invoice_data
 
 if __name__ == "__main__":
-    import asyncio
-    agent = InvoiceExtractionAgent()
-    sample_pdf = "data/raw/invoices/invoice_0_missing_product_code.pdf"
-    result = asyncio.run(agent.run(sample_pdf))
-    print(result.model_dump_json(indent=2))
+    async def main():
+        agent = InvoiceExtractionAgent()
+        sample_pdf = "data/raw/invoices/invoice_0_missing_product_code.pdf"
+        result = await agent.run(sample_pdf)
+        print(result.model_dump_json(indent=2))
+    asyncio.run(main())
