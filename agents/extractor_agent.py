@@ -1,3 +1,7 @@
+# /agents/extractor_agent.py
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from typing import Dict, Any
 from langchain.agents import AgentExecutor, create_structured_chat_agent
 from langchain_community.chat_models import ChatOpenAI
