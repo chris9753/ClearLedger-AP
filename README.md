@@ -59,6 +59,8 @@ An intelligent invoice processing system leveraging LangChain's multi-agent work
     }
     ```
 
+- Anomaly Detection: Added and integrated.
+
 ## Setup
 1. Install Dependencies:
      ```bash
