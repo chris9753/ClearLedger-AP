@@ -130,4 +130,6 @@ if __name__ == "__main__":
         sample_pdf = "data/raw/invoices/invoice_0_missing_product_code.pdf"
         result = await agent.run(sample_pdf)
         print(result.model_dump_json(indent=2))
-    asyncio.run(main())
+    asyncio.run(main()) 
+
+# /agents/extractor_agent.py
