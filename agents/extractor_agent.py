@@ -60,6 +60,7 @@ class InvoiceExtractionAgent(BaseAgent):
             ResponseSchema(name="total_amount", description="Total amount", type="string")
         ]
         output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
+        format_instructions = output_parser.get_format_instructions()
         system_prompt = SystemMessagePromptTemplate.from_template(
             """
             You are an expert invoice data extraction agent. Parse invoice text and extract key information as structured JSON:
@@ -69,7 +70,7 @@ class InvoiceExtractionAgent(BaseAgent):
             - total_amount
             Return the result in this format:
             ```json
-            {output_parser.get_format_instructions()}
+            {format_instructions}
             ```
             Use the invoice_extraction_tool if needed: {tool_names}
             Keep track of steps in the agent_scratchpad.
