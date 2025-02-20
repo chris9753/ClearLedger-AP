@@ -43,12 +43,12 @@ class InvoiceExtractionTool(BaseTool):
             "total_amount": {"value": "7595.00", "confidence": 0.99}
         }
 
-class InvoiceExtractionAgent(BaseAgent):
-    def __init__(self):
-        super().__init__()
-        self.llm = Ollama(model="mixtral:8x7b")  # Replace mistral:7b with mixtral:8x7b
-        self.tools = [InvoiceExtractionTool()]
-        self.agent = self._create_extraction_agent()
+    class InvoiceExtractionAgent(BaseAgent):
+        def __init__(self):
+            super().__init__()
+            self.llm = Ollama(model="mistral:7b")  
+            self.tools = [InvoiceExtractionTool()]
+            self.agent = self._create_extraction_agent()
 
     def _create_extraction_agent(self) -> AgentExecutor:
         response_schemas = [
