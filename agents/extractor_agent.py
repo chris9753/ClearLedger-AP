@@ -119,8 +119,13 @@ def _extract_fields(self, text: str) -> Dict:
     return fields
 
 if __name__ == "__main__":
+    import os
     agent = InvoiceExtractionAgent()
-    sample_pdf = "data/test_samples/sample_invoice.pdf"
+    raw_dir = "data/raw/"
+    sample_pdf = next((f for f in os.listdir(raw_dir) if f.lower().endswith(".pdf")), None)
+    if not sample_pdf:
+        raise FileNotFoundError("No PDF found in data/raw/")
+    sample_pdf = os.path.join(raw_dir, sample_pdf)
     try:
         result = agent.extract(sample_pdf)
         print(result.model_dump_json())
