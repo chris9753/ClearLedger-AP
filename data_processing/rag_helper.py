@@ -7,7 +7,7 @@ from data_processing.document_parser import extract_text_from_pdf
 
 model = SentenceTransformer('all-MiniLM-L6-v2')
 
-def compute_embedding(text: str, dim: int = 128) -> np.ndarray:
+def compute_embedding(text: str, dim: int = 384) -> np.ndarray:
     """Compute embedding for a given text using SentenceTransformer."""
     embedding = model.encode(text)
     return np.array(embedding, dtype=np.float32)
