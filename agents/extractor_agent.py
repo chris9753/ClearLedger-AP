@@ -1,10 +1,9 @@
-# /agents/extractor_agent.py
-
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from typing import Dict, Any
 import asyncio
+import re  # For cleaning total_amount
 from langchain.agents import AgentExecutor, create_structured_chat_agent
 from langchain_community.llms import Ollama
 from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
@@ -55,7 +54,7 @@ class InvoiceExtractionAgent(BaseAgent):
             ResponseSchema(name="vendor_name", description="Vendor name", type="string"),
             ResponseSchema(name="invoice_number", description="Invoice number", type="string"),
             ResponseSchema(name="invoice_date", description="Invoice date (YYYY-MM-DD)", type="string"),
-            ResponseSchema(name="total_amount", description="Total amount", type="string")
+            ResponseSchema(name="total_amount", description="Total amount without currency symbols (e.g., 2193.43)", type="string")
         ]
         output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
         format_instructions = output_parser.get_format_instructions()
@@ -65,11 +64,13 @@ class InvoiceExtractionAgent(BaseAgent):
             - vendor_name
             - invoice_number
             - invoice_date (YYYY-MM-DD)
-            - total_amount
+            - total_amount (numeric string without currency symbols, e.g., "2193.43")
+
             Return only the JSON result in this exact format, without additional text or explanation:
             ```json
             {format_instructions}
             ```
+
             Use the invoice_extraction_tool if needed: {tool_names}
             Log your steps in the agent_scratchpad for clarity.
             """
@@ -96,13 +97,15 @@ class InvoiceExtractionAgent(BaseAgent):
         else:
             invoice_text = ocr_process_image(document_path)
             logger.debug(f"Extracted OCR text length: {len(invoice_text)}")
+
         output_parser = StructuredOutputParser.from_response_schemas([
             ResponseSchema(name="vendor_name", description="Vendor name", type="string"),
             ResponseSchema(name="invoice_number", description="Invoice number", type="string"),
             ResponseSchema(name="invoice_date", description="Invoice date (YYYY-MM-DD)", type="string"),
-            ResponseSchema(name="total_amount", description="Total amount", type="string")
+            ResponseSchema(name="total_amount", description="Total amount without currency symbols (e.g., 2193.43)", type="string")
         ])
         format_instructions = output_parser.get_format_instructions()
+
         try:
             logger.debug("Invoking AgentExecutor with LLM for extraction")
             result = await asyncio.to_thread(self.agent.invoke, {
@@ -115,11 +118,25 @@ class InvoiceExtractionAgent(BaseAgent):
             extracted_data = result["output"]["data"]
             confidence = result["output"]["confidence"]
             logger.debug(f"LLM extraction succeeded: {extracted_data}")
+
+            # Post-process total_amount to remove currency symbols
+            total_amount = extracted_data.get("total_amount", {}).get("value", "")
+            cleaned_total_amount = re.sub(r'[^\d.]', '', total_amount)
+            extracted_data["total_amount"]["value"] = cleaned_total_amount
+
+            logger.info(f"Cleaned total_amount: {cleaned_total_amount}")
         except Exception as e:
             logger.warning(f"LLM parsing failed: {str(e)}. Falling back to placeholder.")
             extracted_data = self.tools[0]._extract_fields(invoice_text)
             confidence = compute_confidence_score(extracted_data)
+
+            # Post-process total_amount in fallback as well
+            total_amount = extracted_data.get("total_amount", {}).get("value", "")
+            cleaned_total_amount = re.sub(r'[^\d.]', '', total_amount)
+            extracted_data["total_amount"]["value"] = cleaned_total_amount
+
             logger.debug(f"Fallback extraction data: {extracted_data}")
+
         invoice_data = InvoiceData(
             vendor_name=extracted_data["vendor_name"]["value"],
             invoice_number=extracted_data["invoice_number"]["value"],
