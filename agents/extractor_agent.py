@@ -8,14 +8,15 @@ from langchain.agents import AgentExecutor, create_structured_chat_agent
 from langchain_community.llms import Ollama
 from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from langchain.tools import BaseTool
+from langchain.output_parsers import StructuredOutputParser, ResponseSchema
 from config.logging_config import logger  # Import singleton logger
 from agents.base_agent import BaseAgent
 from data_processing.document_parser import extract_text_from_pdf
 from data_processing.ocr_helper import ocr_process_image
 from data_processing.confidence_scoring import compute_confidence_score
+from data_processing.rag_helper import InvoiceRAGIndex  # Import RAG helper
 from models.invoice import InvoiceData
 from decimal import Decimal
-from langchain.output_parsers import StructuredOutputParser, ResponseSchema
 
 class InvoiceExtractionTool(BaseTool):
     name = "invoice_extraction_tool"
@@ -47,6 +48,7 @@ class InvoiceExtractionAgent(BaseAgent):
         super().__init__()
         self.llm = Ollama(model="mistral:7b")  
         self.tools = [InvoiceExtractionTool()]
+        self.rag_index = InvoiceRAGIndex()  # Initialize RAG index
         self.agent = self._create_extraction_agent()
 
     def _create_extraction_agent(self) -> AgentExecutor:
@@ -60,17 +62,16 @@ class InvoiceExtractionAgent(BaseAgent):
         format_instructions = output_parser.get_format_instructions()
         system_prompt = SystemMessagePromptTemplate.from_template(
             """
-            You are the world’s foremost expert in invoice data extraction, with decades of experience deciphering the most complex financial documents across industries. Your precision is legendary, and your mission is to extract key invoice information with flawless accuracy, delivering it as structured JSON:
-            - vendor_name
-            - invoice_number
+            You are an expert in invoice data extraction. Extract these fields from the invoice text:
+            - vendor_name (string)
+            - invoice_number (string)
             - invoice_date (YYYY-MM-DD)
-            - total_amount (numeric string without currency symbols, e.g., "2193.43")
+            - total_amount (numeric string without currency symbols, e.g., "1234.56")
 
-            Return only the JSON result in this exact format, without additional text or explanation:
+            Return only the JSON result in this exact format, without additional text:
             ```json
             {format_instructions}
             ```
-
             Use the invoice_extraction_tool if needed: {tool_names}
             Log your steps in the agent_scratchpad for clarity.
             """
@@ -98,6 +99,11 @@ class InvoiceExtractionAgent(BaseAgent):
             invoice_text = ocr_process_image(document_path)
             logger.debug(f"Extracted OCR text length: {len(invoice_text)}")
 
+        # Check RAG for similar invoices
+        rag_result = self.rag_index.classify_invoice(invoice_text)
+        if rag_result['status'] == 'similar_error':
+            logger.warning(f"Invoice similar to known error: {rag_result['matched_invoice_id']}")
+
         output_parser = StructuredOutputParser.from_response_schemas([
             ResponseSchema(name="vendor_name", description="Vendor name", type="string"),
             ResponseSchema(name="invoice_number", description="Invoice number", type="string"),
@@ -123,18 +129,17 @@ class InvoiceExtractionAgent(BaseAgent):
             total_amount = extracted_data.get("total_amount", {}).get("value", "")
             cleaned_total_amount = re.sub(r'[^\d.]', '', total_amount)
             extracted_data["total_amount"]["value"] = cleaned_total_amount
-
             logger.info(f"Cleaned total_amount: {cleaned_total_amount}")
+
         except Exception as e:
             logger.warning(f"LLM parsing failed: {str(e)}. Falling back to placeholder.")
             extracted_data = self.tools[0]._extract_fields(invoice_text)
             confidence = compute_confidence_score(extracted_data)
 
-            # Post-process total_amount in fallback as well
+            # Post-process total_amount in fallback
             total_amount = extracted_data.get("total_amount", {}).get("value", "")
             cleaned_total_amount = re.sub(r'[^\d.]', '', total_amount)
             extracted_data["total_amount"]["value"] = cleaned_total_amount
-
             logger.debug(f"Fallback extraction data: {extracted_data}")
 
         invoice_data = InvoiceData(
