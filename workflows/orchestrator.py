@@ -112,13 +112,21 @@ class InvoiceProcessingWorkflow:
 
 async def main():
     workflow = InvoiceProcessingWorkflow()
-    raw_dir = "data/raw/invoices/"
-    sample_pdf = os.path.join(raw_dir, "invoice_0_missing_product_code.pdf")
-    if not os.path.exists(sample_pdf):
-        logger.error(f"Sample PDF not found: {sample_pdf}")
-        raise FileNotFoundError(f"Sample PDF not found: {sample_pdf}")
-    result = await workflow.process_invoice(sample_pdf)
-    print(result)
+    test_dir = "data/test_samples/"
+    sample_pdfs = [
+        "invoice_missing_product_example.pdf",
+        "invoice_non_product_example.pdf",
+        "invoice_poor_quality_example.pdf",
+        "invoice_price_variance_example.pdf",
+        "invoice_standard_example.pdf"
+    ]
+    for sample in sample_pdfs:
+        sample_path = os.path.join(test_dir, sample)
+        if not os.path.exists(sample_path):
+            logger.error(f"Sample PDF not found: {sample_path}")
+            continue
+        result = await workflow.process_invoice(sample_path)
+        print(f"Result for {sample}: {result}")
 
 if __name__ == "__main__":
     asyncio.run(main())
