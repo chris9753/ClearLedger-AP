@@ -3,12 +3,15 @@
 ## 🎯 Overview
 An intelligent invoice processing system leveraging LangChain's multi-agent workflow to automate extraction, validation, and purchase order (PO) matching. Built for the "Technical Challenge: Intelligent Invoice Processing with LangChain Multi-Agent Workflow" to reduce manual processing time by 75% and minimize errors.
 
-### 📋 Key Features
+## 📋 Key Features
 - Processes PDFs from:
-    - `data/raw/invoices/` (35 invoices)
-    - `data/raw/test_samples/` (3 PDFs)
-- Integrates extraction, validation, matching, and human review
-- Implements async processing and robust error handling
+  - `data/raw/invoices/` (35 invoices)
+  - `data/raw/test_samples/` (3 PDFs)
+- Integrates multiple agents for extraction, validation, matching, human review, and fallback procedures
+- Implements RAG-based error handling and performance monitoring
+- Utilizes async processing with robust error handling, structured logging, and retries
+
+---
 
 ## 📅 Development Timeline
 
@@ -17,206 +20,255 @@ An intelligent invoice processing system leveraging LangChain's multi-agent work
 Establish a solid foundation for the 10-day development process.
 
 #### 🔨 Activities
-- Organized detailed 10-day workflow
+- Organized a detailed 10-day workflow
 - Analyzed "Technical Challenge" requirements
 - Reserved AI tools:
-    - GPT-4 Turbo
-    - Claude 3.5
-    - GitHub Copilot X
-    - LangSmith
-- Project structure:
-    ```bash
-    /clear_ledger_project
-    ├── agents/
-    ├── config/
-    ├── data/
-    ├── data_processing/
-    ├── models/
-    ├── workflows/
-    ├── tests/
-    ├── README.md
-    ├── requirements.txt
-    ├── Dockerfile
-    ```
+  - GPT-o3-mini 
+  - Claude 3.5 Sonnet
+  - GitHub Copilot 
+  - Grok3
+
+
+- Defined project structure:
+
+  ```bash
+  /clear_ledger_project
+  ├── agents/
+  ├── config/
+  ├── data/
+  ├── data_processing/
+  ├── models/
+  ├── workflows/
+  ├── tests/
+  ├── README.md
+  ├── requirements.txt
+  ├── Dockerfile
+  ```
 
 #### 🏁 Outcome
-- Initialized GitHub repo
+- Initialized GitHub repository
 - Installed dependencies:
-    - `langchain==0.2.16`
-    - `pdfplumber`
-    - `pytesseract`
+  - `langchain==0.2.16`
+  - `pdfplumber`
+  - `pytesseract`
 - Cloned dataset
 - Prepared for extraction agent development
 
+---
+
 ### Day 2: Invoice Extraction Agent
 #### 🔧 Implementation Details
-- **InvoiceExtractionAgent** (`agents/extractor_agent.py`)
-    - Uses LangChain 0.2.16 + Mistral 7B (Ollama)
-    - Extracts structured data from PDFs
+- **InvoiceExtractionAgent** (`agents/extractor_agent.py`):
+  - Utilizes LangChain 0.2.16 with Mistral 7B (Ollama)
+  - Extracts structured data from PDFs
 
 #### 🛠️ Components
 1. **PDF Parsing & OCR**
-     - `data_processing/document_parser.py` (pdfplumber)
-     - `data_processing/ocr_helper.py` (pytesseract)
+   - `data_processing/document_parser.py` (pdfplumber)
+   - `data_processing/ocr_helper.py` (pytesseract)
 
 2. **Data Models**
-     - `InvoiceData` Model with Pydantic v2
-     - Supports required and optional fields
-     - Uses `Decimal` precision
-    3. **Processing Features**
-        - Confidence scoring
-        - JSON logging
-        - Error handling
+   - `InvoiceData` model built with Pydantic v2
+   - Supports required and optional fields with Decimal precision
 
-    #### 📊 Sample Output
-    ```json
-    {
-        "vendor_name": "ABC Corp Ltd.",
-        "invoice_number": "INV-2024-001",
-        "invoice_date": "2024-02-18",
-        "total_amount": "7595.00",
-        "confidence": 0.955
-    }
-    ```
+3. **Processing Features**
+   - Confidence scoring
+   - JSON logging
+   - Error handling with fallback mechanisms
 
-    #### Build the Invoice Validation Agent & Refine Extraction
-    ##### 🔧 Implementation Details
-    - Implemented **InvoiceValidationAgent** (`agents/validator_agent.py`)
-    - Validates extracted data for missing fields and format errors
-    - Added anomaly detection for duplicates and outliers
-    - Created workflow orchestration for extraction and validation
+#### 📊 Sample Output
+```json
+{
+  "vendor_name": "ABC Corp Ltd.",
+  "invoice_number": "INV-2024-001",
+  "invoice_date": "2024-02-18",
+  "total_amount": "7595.00",
+  "confidence": 0.955
+}
+```
 
-    ##### 🛠️ Improvements
-    - Enhanced error handling with try-except blocks
-    - Processed PDFs from multiple subdirectories
-    - Added Pydantic v2 validation models
+#### Invoice Validation & Extraction Refinement
+- **InvoiceValidationAgent** (`agents/validator_agent.py`):
+  - Validates extracted data for missing fields and format inconsistencies
+  - Adds anomaly detection for duplicates and outliers
+  - Orchestrates extraction and validation workflows
 
-    ##### 📊 Sample Output
-    ```json
-    {
-      "extracted_data": {...},
-      "validation_result": {"status": "valid", "errors": {}}
-    }
-    ```
+**Improvements:**
+- Enhanced error handling using try-except blocks
+- Processed PDFs from multiple subdirectories
+- Introduced Pydantic v2 validation models
 
-    #### PO Matching Agent & Multi-Agent Coordination
-    ##### 🔧 Implementation Details
-    - Implemented **PurchaseOrderMatchingAgent** with fuzzy matching
-    - Enhanced workflow orchestration for full pipeline integration
-    - Fixed CSV column mismatches
-    - Added comprehensive logging
+#### 📊 Sample Output
+```json
+{
+  "extracted_data": { ... },
+  "validation_result": { "status": "valid", "errors": {} }
+}
+```
 
-    ##### 📊 Sample Output
-    ```json
-    {
-      "extracted_data": {...},
-      "validation_result": {"status": "valid", "errors": {}},
-      "matching_result": {"status": "unmatched", "po_number": null, "match_confidence": 0.0}
-    }
-    ```
+#### PO Matching & Multi-Agent Coordination
+- **PurchaseOrderMatchingAgent**:
+  - Implements fuzzy matching for purchase order validation
+  - Integrates full pipeline orchestration
+  - Resolves CSV column mismatches
+  - Provides comprehensive logging
 
-    #### Error Handling, Edge Cases & Human-in-the-Loop
-    ##### 🔧 Implementation Details
-    - Added async processing with retry mechanism
-    - Implemented human review for low-confidence cases
-    - Optimized logging configuration
-    - Enhanced async compatibility across all agents
+#### 📊 Sample Output
+```json
+{
+  "extracted_data": { ... },
+  "validation_result": { "status": "valid", "errors": {} },
+  "matching_result": { "status": "unmatched", "po_number": null, "match_confidence": 0.0 }
+}
+```
 
-    ##### 🛠️ Improvements
-    - Fixed asyncio dependencies
-    - Adjusted extraction prompts
-    - Enhanced error handling
+#### Error Handling, Edge Cases & Human-in-the-Loop
+- Added async processing with retry mechanisms
+- **Human Review API** implemented in `api/review_api.py` using FastAPI to allow manual corrections via a “veteran reviewer” prompt
+- Optimized logging configuration and enhanced async compatibility
 
-    ##### 📊 Sample Output
-    ```json
-    {
-      "extracted_data": {
-        "vendor_name": "ABC Corp Ltd.",
-        "invoice_number": "INV-2024-001",
-        "invoice_date": "2024-02-18",
-        "total_amount": "7595.00",
-        "confidence": 0.955,
-        "po_number": null,
-        "tax_amount": null,
-        "currency": null
-      },
-      "validation_result": {
-        "status": "valid",
-        "errors": {}
-      },
-      "matching_result": {
-        "status": "unmatched",
-        "po_number": null,
-        "match_confidence": 0.0
-      },
-      "review_result": {
-        "status": "approved",
-        "invoice_data": {...}
-      }
-    }
-    ```
+**Improvements:**
+- Fixed asyncio dependencies
+- Adjusted extraction prompts
+- Enhanced error handling
 
-- Implemented a human-in-the-loop verification UI in **api/review_api.py** using FastAPI. This provides endpoints for retrieving review requests and submitting manual corrections, leveraging a "veteran reviewer" prompt for LLM-assisted review.
+#### 📊 Sample Output
+```json
+{
+  "extracted_data": {
+    "vendor_name": "ABC Corp Ltd.",
+    "invoice_number": "INV-2024-001",
+    "invoice_date": "2024-02-18",
+    "total_amount": "7595.00",
+    "confidence": 0.955,
+    "po_number": null,
+    "tax_amount": null,
+    "currency": null
+  },
+  "validation_result": {
+    "status": "valid",
+    "errors": {} 
+  },
+  "matching_result": {
+    "status": "unmatched",
+    "po_number": null,
+    "match_confidence": 0.0
+  },
+  "review_result": {
+    "status": "approved",
+    "invoice_data": { ... }
+  }
+}
+```
 
-- Updated **agents/extractor_agent.py** to enhance the LLM prompt. The prompt now enforces JSON-only output for improved parsing reliability, particularly for challenging invoices (e.g. invoices missing a product code).
+Additional Enhancements:
+- Updated LLM prompt in `agents/extractor_agent.py` to enforce JSON-only output, improving parsing reliability
+- Integrated FAISS-based RAG module in `data_processing/rag_helper.py` to store error invoices and classify new ones, reducing the need for human intervention
+- Maintained verbose logging for effective debugging and performance tracking
 
-- Added a FAISS-based RAG integration module in **data_processing/rag_helper.py**. This module stores error invoices and classifies new invoices by similarity, reducing unnecessary human intervention.
+---
 
-- Continued to leverage verbose logging for debugging and performance tracking across the system.
+### Day 3: Advanced Error Handling, RAG Integration, and Extraction Refinement
 
-## Overall Project Structure
+#### 🎯 Goals
+- Enhance error handling using RAG to preemptively address edge cases
+- Refine the extraction agent for consistent and reliable output
+- Introduce performance monitoring to track pipeline efficiency
 
-- **agents/**: Implements various agents including extraction, validation, matching, human review, and fallback.
-- **api/**: Provides RESTful APIs including endpoints for human review (e.g., **review_api.py**).
-- **data_processing/**: Contains modules for document parsing, OCR, confidence scoring, anomaly detection, and RAG integration.
+#### 🔨 Activities
+- **Terminal Analysis:**
+  - Ran `python workflows/orchestrator.py` and observed AgentExecutor processing
+  - Noted narrative text in LLM JSON-like output causing parsing failures
+  - Identified inconsistent formatting in `total_amount` (e.g., "1793.7" vs. "1793.70")
 
+- **Extraction Agent Refinement:**
+  - Updated prompt in `agents/extractor_agent.py` to enforce strict JSON-only response
+  - Added post-processing with regex to clean any extraneous narrative text
 
-## ✅ Completed (Days 1–2)
-- InvoiceExtractionAgent: Mistral 7B integration, strict JSON parsing, and fallback mechanisms.
-- InvoiceValidationAgent: Validates extracted fields, handles anomalies, and flags errors.
-- PurchaseOrderMatchingAgent: Fuzzy matching with vendor_data.csv, handles mismatches.
-- Human Review API: FastAPI endpoints for manual invoice corrections.
-- FAISS-based RAG: Handles edge cases, indexes error-prone invoices for smarter future parsing.
-- Async Processing & Error Handling: Built-in retries, structured logging, and error tracking.
+- **Enhanced Error Handling with RAG:**
+  - Integrated FAISS-based RAG in `data_processing/rag_helper.py` to classify invoices against known error cases
+  - Updated extraction logic to log warnings if an invoice is similar to known error-prone cases
 
-## 🚀 Remaining Workflow (Days 3–10)
+- **Fallback Mechanism:**
+  - Added `agents/fallback_agent.py` implementing regex-based extraction as a backup
 
-### Day 3 – Frontend Development & Integration
-- Build a basic frontend using Streamlit or Next.js including:
-  - Invoice upload page
-  - Human review panel
-  - Processed invoice table
-- Integrate the frontend with backend APIs (e.g., review endpoints).
-- Implement performance benchmarking to track processing times, confidence scores, and resource usage.
+- **Monitoring:**
+  - Developed `config/monitoring.py` to log execution times and integrate performance tracking in `workflows/orchestrator.py`
+- **Data Persistence:**
+  - Saved processed results in `data/processed/structured_invoices.json` for further analysis
 
-### Day 4 – Deployment & Post-Processing Analytics
-- **Dockerize** the application to containerize all dependencies.
-- Set up a **CI/CD Pipeline** using GitHub Actions for automated testing and deployment.
-- (Optional) Deploy the system using AWS Lambda or GCP Cloud Run.
-- Add post-processing analytics dashboard to visualize trends, anomalies, and key metrics.
+#### 🛠️ Challenges and Solutions
+- **LLM Narrative Output:**
+  - Challenge: LLM output wrapping JSON in narrative text
+  - Solution: Enforce JSON-only output and apply regex cleaning, with fallback extraction if necessary
 
-### Day 5 – Documentation & Comprehensive Testing
-- Write detailed documentation including:
-  - An updated README with setup instructions
-  - Architecture diagrams (using Mermaid.js or Draw.io)
-  - A performance report detailing token usage, processing times, and accuracy rates
-- Expand test coverage with unit, integration, and load tests, including edge case simulations (e.g., OCR errors, missing fields, duplicate invoices).
-- Final code refactoring and cleanup.
+- **Inconsistent Formatting:**
+  - Challenge: Variations in `total_amount` formatting
+  - Solution: Standardize post-processing to ensure two decimal places
 
-### Day 6 – Finalization & Submission
-- Conduct full end-to-end testing of the entire pipeline on diverse invoice samples.
-- Optimize performance by fine-tuning retry logic, async processing, and FAISS indexing.
-- Record a video demo showcasing the system workflow, agent interactions, and performance highlights.
-- Prepare your final submission by:
-  - Pushing the polished code to GitHub
-  - Including all deliverables (documentation, video demo, diagrams)
-  - Drafting and sending the submission email.
+#### 📊 Expected Sample Output
+```json
+{
+  "vendor_name": "Solis Inc",
+  "invoice_number": "IN_3515484",
+  "invoice_date": "2025-01-30",
+  "total_amount": "1793.70",
+  "confidence": 0.95
+}
+```
 
+#### 📝 Notes for CEO
+- **Progress:** Ahead of schedule; already integrating advanced features (monitoring and full pipeline orchestration) on Day 3
+- **Challenges:** Addressed LLM output consistency with prompt refinement and regex cleaning
+- **Next Steps:** Finalize parsing reliability and commence frontend development on Day 4
 
-## ✅ Summary
+---
 
-- **Days 1–2:** Core features implemented including extraction, validation, PO matching, error handling, and a human-in-the-loop review mechanism.
-- **Days 3–10:** Focus shifts to frontend development, deployment, comprehensive testing, and final documentation.
+## 🔍 Overall Project Structure
+- **agents/**: Contains various agents for extraction (`extractor_agent.py`), validation (`validator_agent.py`), matching (`matching_agent.py`), and fallback (`fallback_agent.py`)
+- **api/**: RESTful API endpoints (e.g., `review_api.py` for human-in-the-loop review)
+- **config/**: Configuration files including monitoring and logging settings
+- **data/**: Raw PDFs (`data/raw/invoices/`, `data/raw/test_samples/`) and processed outputs (`data/processed/structured_invoices.json`)
+- **data_processing/**: Modules for document parsing, OCR, anomaly detection, and RAG integration (`document_parser.py`, `ocr_helper.py`, `rag_helper.py`)
+- **models/**: Pydantic models such as `InvoiceData`
+- **workflows/**: Orchestration of the processing pipeline (`orchestrator.py`)
+- **tests/**: Testing suites and placeholder for future tests
+
+---
+
+## ✅ Completed (Days 1–3)
+- **InvoiceExtractionAgent:** Integration with Mistral 7B, strict JSON parsing, RAG integration, and fallback mechanisms
+- **InvoiceValidationAgent:** Field validation with anomaly detection
+- **PurchaseOrderMatchingAgent:** Fuzzy matching with vendor data and CSV fixes
+- **Human Review API:** FastAPI endpoints for manual invoice corrections
+- **FAISS-based RAG:** Classification of error-prone invoices
+- **Async Processing & Error Handling:** Retries, structured logging, and enhanced error capture
+- **Monitoring:** Execution time tracking integrated into the pipeline
+
+---
+
+## 🚀 Remaining Workflow (Days 4–10)
+
+### Day 4 – Frontend Development & Integration
+- Build a basic frontend (Streamlit/Next.js) for invoice upload, review panel, and results display
+- Integrate frontend with backend APIs
+- Benchmark processing times and confidence scores
+
+### Day 5 – Deployment & Post-Processing Analytics
+- Dockerize the application
+- Set up CI/CD Pipeline with GitHub Actions
+- Develop an analytics dashboard for trends, anomalies, and key performance metrics
+
+### Day 6 – Documentation & Comprehensive Testing
+- Finalize and expand documentation (README, architecture diagrams, performance reports)
+- Enhance test coverage with unit, integration, and edge case tests
+- Code refactoring and cleanup
+
+### Day 7 – Finalization & Submission
+- Conduct full end-to-end testing on diverse invoice samples
+- Optimize performance (retry logic, FAISS indexing)
+- Record a demo video showcasing system workflow and performance highlights
+- Prepare final submission packaging (GitHub push, deliverables, submission email)
 
 ---
 
@@ -228,13 +280,12 @@ pip install -r requirements.txt
 ```
 
 ### Key Packages
-- `langchain==0.2.16`
-- `langchain_community==0.2.16`
-- `pdfplumber>=0.10.0`
-- `pytesseract>=0.3.10`
-- `pydantic>=2.0.0`
-- `fuzzywuzzy>=0.18.0`
-- `aiofiles>=23.2.1`
+- langchain==0.2.16
+- pdfplumber (>=0.10.0)
+- pytesseract (>=0.3.10)
+- pydantic (>=2.0.0)
+- fuzzywuzzy (>=0.18.0)
+- aiofiles (>=23.2.1)
 
 ### Ollama Setup
 ```bash
@@ -244,12 +295,11 @@ ollama run mistral:7b "test"
 ```
 
 ### Data Verification
-1. Ensure PDFs are in:
-     - `data/raw/invoices/`
-     - `data/raw/test_samples/`
-2. Verify `vendor_data.csv` in `data/raw/`
+1. Ensure PDFs are located in:
+   - `data/raw/invoices/`
+   - `data/raw/test_samples/`
+2. Verify presence of `vendor_data.csv` in `data/raw/`
 
 ### Execution
 ```bash
 python workflows/orchestrator.py
-```
