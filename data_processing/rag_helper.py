@@ -1,8 +1,8 @@
 import faiss
 import numpy as np
-import logging
-
-logger = logging.getLogger("InvoiceProcessing")
+import os
+from config.logging_config import logger
+from data_processing.document_parser import extract_text_from_pdf
 
 def compute_embedding(text: str, dim: int = 128) -> np.ndarray:
     """Compute a dummy embedding for a given text by normalizing its byte values into a fixed-size vector."""
@@ -19,6 +19,28 @@ class InvoiceRAGIndex:
         self.index = faiss.IndexFlatL2(dim)
         self.documents = []  # List of dicts with invoice details
         logger.debug(f"Initialized FAISS index with dimension {dim}")
+        self.load_test_samples()
+
+    def load_test_samples(self):
+        """Load test sample invoices into the FAISS index."""
+        test_dir = "data/test_samples/"
+        sample_files = [
+            "invoice_missing_product_example.pdf",
+            "invoice_non_product_example.pdf",
+            "invoice_poor_quality_example.pdf",
+            "invoice_price_variance_example.pdf",
+            "invoice_standard_example.pdf"
+        ]
+        for sample in sample_files:
+            path = os.path.join(test_dir, sample)
+            if os.path.exists(path):
+                text = extract_text_from_pdf(path)
+                if text:
+                    self.add_invoice(sample, text)
+                else:
+                    logger.warning(f"No text extracted from {sample}")
+            else:
+                logger.warning(f"Sample file not found: {path}")
 
     def add_invoice(self, invoice_id: str, invoice_text: str):
         embedding = compute_embedding(invoice_text, self.dim)
@@ -41,9 +63,6 @@ class InvoiceRAGIndex:
         return results
 
     def classify_invoice(self, invoice_text: str, threshold: float = 0.1) -> dict:
-        """Classify a new invoice by comparing its embedding to the existing error invoices.
-        Returns the most similar error invoice if similarity (L2 distance) is below the threshold.
-        """
         results = self.query_invoice(invoice_text, k=1)
         if results and results[0]['distance'] < threshold:
             classification = {
@@ -57,19 +76,8 @@ class InvoiceRAGIndex:
             logger.info("Invoice classified as novel")
         return classification
 
-# Example usage (to be removed or guarded by __name__ == '__main__' in production)
 if __name__ == "__main__":
     rag = InvoiceRAGIndex()
-    # Simulate adding some error invoices
-    error_invoices = {
-        "invoice_0_missing_product_code.pdf": "Error invoice content missing product code",
-        "invoice_0_poor_quality.pdf": "Error invoice content of poor quality",
-        "invoice_0_non_product.pdf": "Error invoice content not related to product",
-        "invoice_0_price_variance.pdf": "Error invoice content with price variance issues"
-    }
-    for inv_id, text in error_invoices.items():
-        rag.add_invoice(inv_id, text)
-    # Classify a new invoice
-    new_invoice_text = "This invoice content seems to lack a product code and has unusual price variance."
+    new_invoice_text = "This invoice content seems to lack a product code."
     classification = rag.classify_invoice(new_invoice_text, threshold=0.5)
     print(classification)
