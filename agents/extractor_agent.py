@@ -4,6 +4,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from typing import Dict, Any
 import asyncio
 import re  # For cleaning total_amount
+import json
 from langchain.agents import AgentExecutor, create_structured_chat_agent
 from langchain_community.llms import Ollama
 from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
@@ -17,6 +18,15 @@ from data_processing.confidence_scoring import compute_confidence_score
 from data_processing.rag_helper import InvoiceRAGIndex  # Import RAG helper
 from models.invoice import InvoiceData
 from decimal import Decimal
+
+def extract_json_from_response(response: str) -> dict:
+    match = re.search(r'\{.*\}', response, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group(0))
+        except json.JSONDecodeError:
+            pass
+    return None
 
 class InvoiceExtractionTool(BaseTool):
     name = "invoice_extraction_tool"
