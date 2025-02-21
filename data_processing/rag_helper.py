@@ -1,20 +1,19 @@
+from sentence_transformers import SentenceTransformer
 import faiss
 import numpy as np
 import os
 from config.logging_config import logger
 from data_processing.document_parser import extract_text_from_pdf
 
+model = SentenceTransformer('all-MiniLM-L6-v2')
+
 def compute_embedding(text: str, dim: int = 128) -> np.ndarray:
-    """Compute a dummy embedding for a given text by normalizing its byte values into a fixed-size vector."""
-    vec = np.zeros(dim, dtype=np.float32)
-    text_bytes = text.encode('utf-8')
-    length = min(len(text_bytes), dim)
-    for i in range(length):
-        vec[i] = text_bytes[i] / 255.0
-    return vec
+    """Compute embedding for a given text using SentenceTransformer."""
+    embedding = model.encode(text)
+    return np.array(embedding, dtype=np.float32)
 
 class InvoiceRAGIndex:
-    def __init__(self, dim: int = 128):
+    def __init__(self, dim: int = 384):
         self.dim = dim
         self.index = faiss.IndexFlatL2(dim)
         self.documents = []  # List of dicts with invoice details
