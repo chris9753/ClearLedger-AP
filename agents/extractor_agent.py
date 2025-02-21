@@ -80,7 +80,7 @@ class InvoiceExtractionAgent(BaseAgent):
                 "invoice_date": json_data.get("invoice_date", ""),
                 "total_amount": json_data.get("total_amount", "")
             }
-            confidence = compute_confidence_score(extracted_data)
+            confidence = 0.95  # Default confidence for OpenAI success
             cleaned_total_amount = re.sub(r'[^\d.]', '', extracted_data["total_amount"])
             extracted_data["total_amount"] = cleaned_total_amount
             logger.info(f"OpenAI extraction succeeded with cleaned total_amount: {cleaned_total_amount}")
