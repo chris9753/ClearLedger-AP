@@ -19,7 +19,8 @@ from decimal import Decimal
 load_dotenv()  # Load environment variables from .env
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-class InvoiceExtractionTool(BaseTool):
+class InvoiceExtractionTool:
+    """A simple tool to extract structured invoice data as a fallback."""
     name = "invoice_extraction_tool"
     description = "Extracts structured invoice data from text with confidence scores."
 
@@ -85,11 +86,20 @@ class InvoiceExtractionAgent(BaseAgent):
             logger.info(f"OpenAI extraction succeeded with cleaned total_amount: {cleaned_total_amount}")
         except Exception as e:
             logger.warning(f"OpenAI extraction failed: {str(e)}. Falling back to placeholder.")
-            extracted_data = self.tools[0]._extract_fields(invoice_text)
-            confidence = compute_confidence_score(extracted_data)
-            total_amount = extracted_data.get("total_amount", {}).get("value", "")
-            cleaned_total_amount = re.sub(r'[^\d.]', '', total_amount)
-            extracted_data["total_amount"]["value"] = cleaned_total_amount
+            extracted_data = self.tools[0]._run(invoice_text)
+            confidence = extracted_data.get("confidence", 0.0)
+            if "error" not in extracted_data:
+                total_amount = extracted_data["data"].get("total_amount", {}).get("value", "")
+                cleaned_total_amount = re.sub(r'[^\d.]', '', total_amount)
+                extracted_data["data"]["total_amount"]["value"] = cleaned_total_amount
+            else:
+                extracted_data = {
+                    "vendor_name": "",
+                    "invoice_number": "",
+                    "invoice_date": "",
+                    "total_amount": "0.00"
+                }
+                confidence = 0.0
             logger.debug(f"Fallback extraction data: {extracted_data}")
 
         invoice_data = InvoiceData(
