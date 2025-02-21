@@ -31,18 +31,19 @@ Establish a solid foundation for the 10-day development process.
 
 - Defined project structure:
 
-  ```bash
-  /clear_ledger_project
-  ├── agents/
-  ├── config/
-  ├── data/
-  ├── data_processing/
-  ├── models/
-  ├── workflows/
-  ├── tests/
-  ├── README.md
-  ├── requirements.txt
-  ├── Dockerfile
+  ```
+ /clear_ledger_project
+├── agents/               → Core AI agents for extraction, validation, matching, etc.
+├── api/                  → FastAPI endpoints (for Human-in-the-Loop review, etc.)
+├── config/               → Settings, logging config, monitoring
+├── data/                 → Raw PDFs, processed data, test samples
+├── data_processing/      → Utilities: OCR, RAG helper, anomaly detection
+├── models/               → Pydantic data models (for type safety & validation)
+├── workflows/            → Orchestrator & pipeline managing agent workflows
+├── tests/                → Unit & integration tests
+├── Dockerfile            → For containerizing the app
+├── README.md             → Project documentation
+└── requirements.txt      → Python dependencies
   ```
 
 #### 🏁 Outcome
