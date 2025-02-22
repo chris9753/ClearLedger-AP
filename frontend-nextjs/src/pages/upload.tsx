@@ -39,9 +39,9 @@ export default function UploadPage() {
     console.log("Uploading file:", files[0].name);
     try {
       const data = await uploadInvoice(files);
-      console.log("API response:", data);
+      console.log("API response:", JSON.stringify(data, null, 2));
       setResponse(data);
-      console.log("Updated response state:", data);
+      console.log("Updated response state:", JSON.stringify(data, null, 2));
     } catch (err) {
       setError('Upload failed. Please try again.');
     } finally {
