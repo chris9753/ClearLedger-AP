@@ -1,117 +1,113 @@
-# frontend/app.py
 import streamlit as st
 import requests
 import pandas as pd
-import plotly.express as px
 
-API_URL = "http://localhost:8000"  # Main app
-REVIEW_API_URL = "http://localhost:8001"  # Review app
+API_URL = "http://localhost:8000"
 
+# Set page config for a custom theme
 st.set_page_config(page_title="Brim Invoice Processing", layout="wide")
-st.title("Clear Ledger AP")
 
-# Upload Section
-st.header("Upload Invoice")
-uploaded_file = st.file_uploader("Choose a PDF invoice", type=["pdf"])
-if uploaded_file:
-    with st.spinner("Processing..."):
-        files = {"file": (uploaded_file.name, uploaded_file, "application/pdf")}
-        response = requests.post(f"{API_URL}/api/upload_invoice", files=files)
-        if response.status_code == 200:
-            st.success("Invoice processed successfully!")
-            st.json(response.json())  # Optional
-        else:
-            st.error(f"Error: {response.text}")
+# Sidebar for navigation
+st.sidebar.title("Navigation")
+page = st.sidebar.radio("Go to", ["Upload", "Invoices", "Review", "Metrics"])
 
-# Invoice Table View
-st.header("Processed Invoices")
-if st.button("Refresh"):
-    with st.spinner("Loading invoices..."):
-        response = requests.get(f"{API_URL}/api/invoices")
-        if response.status_code == 200:
-            invoices = response.json()
-            if invoices:
-                df = pd.DataFrame(invoices)
-                display_cols = ["vendor_name", "invoice_number", "total_amount", "confidence"]
-                available_cols = [col for col in display_cols if col in df.columns]
-                st.dataframe(df[available_cols], use_container_width=True)
+if page == "Upload":
+    st.header("Upload Invoice")
+    uploaded_file = st.file_uploader("Choose a PDF invoice", type="pdf")
+    if uploaded_file:
+        with st.spinner("Processing invoice..."):
+            response = requests.post(f"{API_URL}/api/upload_invoice", files={"file": uploaded_file})
+            if response.status_code == 200:
+                st.success("Invoice processed successfully!")
+                result = response.json()
+                st.json(result)  # Show full response
+                # Display timings in a user-friendly way
+                st.write("**Processing Times:**")
+                st.write(f"- Extraction: {result.get('extraction_time', 0):.2f}s")
+                st.write(f"- Validation: {result.get('validation_time', 0):.2f}s")
+                st.write(f"- Matching: {result.get('matching_time', 0):.2f}s")
+                st.write(f"- Review: {result.get('review_time', 0):.2f}s")
+                st.write(f"- Total: {result.get('total_time', 0):.2f}s")
             else:
-                st.info("No invoices processed yet.")
-        else:
-            st.error(f"Error: {response.text}")
+                st.error(f"Error: {response.text}")
 
-# Review Panel
-st.header("Review Flagged Invoices")
-if 'invoices' in locals() and invoices:
-    flagged = [inv for inv in invoices if float(inv.get("confidence", 1.0)) < 0.9]
-    for inv in flagged:
-        with st.expander(f"Invoice {inv.get('invoice_number', 'Unknown')}"):
-            vendor = st.text_input("Vendor", inv.get("vendor_name", ""), key=f"vendor_{inv['invoice_number']}")
-            total = st.number_input("Total", float(inv.get("total_amount", 0)), key=f"total_{inv['invoice_number']}")
-            if st.button("Save Changes", key=f"save_{inv['invoice_number']}"):
-                review_data = {
-                    "invoice_id": inv["invoice_number"],
-                    "corrections": {"vendor_name": vendor, "total_amount": str(total)},
-                    "reviewer_notes": "Manual correction via UI"
-                }
-                response = requests.post(f"{REVIEW_API_URL}/review", json=review_data)
-                if response.status_code == 200:
-                    st.success("Corrections submitted!")
+elif page == "Invoices":
+    st.header("Processed Invoices")
+    if st.button("Refresh"):
+        with st.spinner("Loading invoices..."):
+            response = requests.get(f"{API_URL}/api/invoices")
+            if response.status_code == 200:
+                invoices = response.json()
+                if invoices:
+                    df = pd.DataFrame(invoices)
+                    display_cols = ["vendor_name", "invoice_number", "total_amount", "confidence", "total_time"]
+                    available_cols = [col for col in display_cols if col in df.columns]
+                    styled_df = df[available_cols].style.applymap(
+                        lambda x: 'color: green' if float(x) > 0.9 else 'color: red', subset=['confidence']
+                    ).format({"total_time": "{:.2f}"})
+                    st.dataframe(styled_df, use_container_width=True)
                 else:
-                    st.error(f"Error submitting corrections: {response.text}")
+                    st.info("No invoices processed yet.")
+            else:
+                st.error(f"Error: {response.text}")
 
-# Performance Metrics Section
-st.header("📊 Performance Metrics")
+elif page == "Review":
+    st.header("Review Flagged Invoices")
+    response = requests.get(f"{API_URL}/api/invoices")
+    if response.status_code == 200:
+        invoices = response.json()
+        flagged = [inv for inv in invoices if float(inv.get("confidence", 1.0)) < 0.9 or inv.get("validation_status") != "valid"]
+        if flagged:
+            for inv in flagged:
+                with st.expander(f"Invoice {inv['invoice_number']} (Confidence: {inv['confidence']:.2f})"):
+                    st.write(f"Total Time: {inv.get('total_time', 0):.2f}s")
+                    vendor = st.text_input("Vendor Name", inv["vendor_name"], key=f"vendor_{inv['invoice_number']}")
+                    total = st.number_input("Total Amount", float(inv["total_amount"]), key=f"total_{inv['invoice_number']}")
+                    if st.button("Save Corrections", key=f"save_{inv['invoice_number']}"):
+                        # Placeholder for correction submission (requires a backend endpoint)
+                        st.success("Corrections saved (simulation)!")
+        else:
+            st.info("No invoices require review.")
+    else:
+        st.error(f"Error: {response.text}")
 
-# Only proceed if we have invoice data
-if 'invoices' in locals() and invoices:
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Processing Times")
-        # Extract processing times from invoices
-        times_df = pd.DataFrame([{
-            'Invoice': inv.get('invoice_number', 'Unknown'),
-            'Extraction (s)': inv.get('extraction_time', 0),
-            'Validation (s)': inv.get('validation_time', 0),
-            'Total (s)': inv.get('total_processing_time', 0)
-        } for inv in invoices])
-        
-        st.table(times_df.style.format({
-            'Extraction (s)': '{:.2f}',
-            'Validation (s)': '{:.2f}',
-            'Total (s)': '{:.2f}'
-        }))
-        
-        # Average metrics
-        st.metric(
-            "Avg. Processing Time", 
-            f"{times_df['Total (s)'].mean():.2f}s"
-        )
-    
-    with col2:
-        st.subheader("Confidence Score Distribution")
-        # Create confidence score distribution
-        confidence_df = pd.DataFrame([{
-            'Invoice': inv.get('invoice_number', 'Unknown'),
-            'Confidence': float(inv.get('confidence', 0)) * 100
-        } for inv in invoices])
-        
-        # Create bar chart using plotly
-        fig = px.bar(
-            confidence_df,
-            x='Invoice',
-            y='Confidence',
-            title='Confidence Scores by Invoice',
-            labels={'Confidence': 'Confidence Score (%)'}
-        )
-        fig.update_layout(xaxis_tickangle=-45)
-        st.plotly_chart(fig, use_container_width=True)
-        
-        # Confidence statistics
-        st.metric(
-            "Avg. Confidence Score",
-            f"{confidence_df['Confidence'].mean():.1f}%"
-        )
-else:
-    st.info("Process some invoices to see performance metrics.")
+elif page == "Metrics":
+    st.header("📊 Performance Metrics")
+    response = requests.get(f"{API_URL}/api/invoices")
+    if response.status_code == 200:
+        invoices = response.json()
+        if invoices:
+            df = pd.DataFrame(invoices)
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Avg. Confidence Score", f"{df['confidence'].mean():.1%}")
+            with col2:
+                st.metric("Total Invoices", len(df))
+            with col3:
+                st.metric("Avg. Processing Time", f"{df['total_time'].mean():.2f}s")
+            
+            # Confidence Distribution
+            st.subheader("Confidence Score Distribution")
+            st.bar_chart(df["confidence"].value_counts())
+            
+            # Processing Times
+            st.subheader("Processing Times")
+            times_df = pd.DataFrame([{
+                "Invoice": inv.get("invoice_number", "Unknown"),
+                "Extraction (s)": inv.get("extraction_time", 0),
+                "Validation (s)": inv.get("validation_time", 0),
+                "Matching (s)": inv.get("matching_time", 0),
+                "Review (s)": inv.get("review_time", 0),
+                "Total (s)": inv.get("total_time", 0)
+            } for inv in invoices])
+            st.table(times_df.style.format({
+                "Extraction (s)": "{:.2f}",
+                "Validation (s)": "{:.2f}",
+                "Matching (s)": "{:.2f}",
+                "Review (s)": "{:.2f}",
+                "Total (s)": "{:.2f}"
+            }))
+        else:
+            st.info("No invoices processed yet.")
+    else:
+        st.error(f"Error: {response.text}")
