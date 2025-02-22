@@ -348,5 +348,25 @@
         "po_number": null,
         "tax_amount": null,
         "currency": null
+    },
+    {
+        "vendor_name": "Solis Inc",
+        "invoice_number": "IN_5666658",
+        "invoice_date": "2025-02-17",
+        "total_amount": "4296.08",
+        "confidence": 0.95,
+        "po_number": null,
+        "tax_amount": null,
+        "currency": null
+    },
+    {
+        "vendor_name": "Solis Inc",
+        "invoice_number": "IN_5666658",
+        "invoice_date": "2025-02-17",
+        "total_amount": "4296.08",
+        "confidence": 0.95,
+        "po_number": null,
+        "tax_amount": null,
+        "currency": null
     }
 ]
