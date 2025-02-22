@@ -10,10 +10,12 @@ from config.logging_config import logger  # Import singleton logger
 from agents.base_agent import BaseAgent
 from models.invoice import InvoiceData
 
-class PurchaseOrderMatchingAgent(BaseAgent):
-    def __init__(self, po_file="data/raw/vendor_data.csv"):
-        super().__init__()
-        self.po_data = self._load_po_data(po_file)
+import os
+class PurchaseOrderMatchingAgent:
+    def __init__(self):
+        # Updated to fix the relative path for vendor_data.csv
+        self.po_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'raw', 'vendor_data.csv')
+        self.po_data = self._load_po_data(self.po_file)
 
     def _load_po_data(self, po_file: str) -> pd.DataFrame:
         logger.debug(f"Loading PO data from: {po_file}")
