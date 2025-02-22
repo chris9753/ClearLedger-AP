@@ -9,6 +9,7 @@ interface UploadResponse {
     total_amount: number;
     confidence: number;
     validation_status: string;
+    invoice_date: string;
   };
 }
 
@@ -80,6 +81,7 @@ export default function UploadPage() {
         <div className="bg-gray-100 p-4 rounded mt-4 space-y-2">
           <p><span className="font-semibold">Vendor:</span> {response.extracted_data.vendor_name}</p>
           <p><span className="font-semibold">Invoice Number:</span> {response.extracted_data.invoice_number}</p>
+          <p><span className="font-semibold">Date:</span> {response.extracted_data.invoice_date}</p>
           <p><span className="font-semibold">Total Amount:</span> {response.extracted_data.total_amount}</p>
           <p><span className="font-semibold">Confidence:</span> {(response.extracted_data.confidence * 100).toFixed(2)}%</p>
           <p><span className="font-semibold">Status:</span> {response.extracted_data.validation_status}</p>
