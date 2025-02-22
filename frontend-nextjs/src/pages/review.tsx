@@ -4,8 +4,8 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 
-// Set up worker for PDF.js with specific version
-pdfjs.GlobalWorkerOptions.workerSrc = "https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+// Set up worker for PDF.js with version matching react-pdf@^9.2.1
+pdfjs.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.7.0/build/pdf.worker.min.js';
 
 // Interface for type safety
 interface Invoice {
