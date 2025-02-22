@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { uploadInvoice } from "../../lib/api";  // Updated import path
+import { toast } from 'react-hot-toast'; // Added import for toast notifications
 
 // Interface for type safety
 interface UploadResponse {
@@ -41,9 +42,11 @@ export default function UploadPage() {
       const data = await uploadInvoice(files[0]);
       console.log("API response:", JSON.stringify(data, null, 2));
       setResponse(data);
+      toast.success('Invoice uploaded!'); // Show success notification
       console.log("Updated response state:", JSON.stringify(data, null, 2));
     } catch (err) {
       setError('Upload failed. Please try again.');
+      toast.error('Upload failed: ' + (err instanceof Error ? err.message : '')); // Show error notification with details
     } finally {
       setLoading(false);
     }
