@@ -6,7 +6,7 @@ import os
 print("os imported")
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 print("Path adjusted")
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Body
 print("FastAPI imported")
 from workflows.orchestrator import InvoiceProcessingWorkflow
 print("Workflow imported")
@@ -17,6 +17,7 @@ print("Path imported")
 import uuid
 print("uuid imported")
 from glob import glob
+from pydantic import BaseModel
 
 # Ensure temp directory exists at startup
 Path("data/temp").mkdir(parents=True, exist_ok=True)
@@ -100,3 +101,42 @@ async def get_invoices():
     except Exception as e:
         print(f"Error reading invoices: {e}")
         return []
+
+class InvoiceUpdate(BaseModel):
+    vendor_name: str
+    invoice_number: str
+    invoice_date: str
+    total_amount: float
+
+@app.put("/api/invoices/{invoice_number}")
+async def update_invoice(invoice_number: str, update_data: InvoiceUpdate):
+    try:
+        if not OUTPUT_FILE.exists():
+            raise HTTPException(status_code=404, detail="No invoices found")
+            
+        with OUTPUT_FILE.open('r') as f:
+            invoices = json.load(f)
+            
+        # Find and update the invoice
+        invoice_found = False
+        for invoice in invoices:
+            if invoice['invoice_number'] == invoice_number:
+                invoice.update({
+                    'vendor_name': update_data.vendor_name,
+                    'invoice_number': update_data.invoice_number,
+                    'invoice_date': update_data.invoice_date,
+                    'total_amount': update_data.total_amount
+                })
+                invoice_found = True
+                break
+                
+        if not invoice_found:
+            raise HTTPException(status_code=404, detail=f"Invoice {invoice_number} not found")
+            
+        # Save updated data back to file
+        with OUTPUT_FILE.open('w') as f:
+            json.dump(invoices, f, indent=4)
+            
+        return {"message": f"Invoice {invoice_number} updated successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating invoice: {str(e)}")
