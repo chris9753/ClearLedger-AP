@@ -8,6 +8,7 @@ interface Invoice {
   total_amount: number;
   confidence: number;
   validation_status: string;
+  invoice_date: string;
 }
 
 export default function InvoicesPage() {
@@ -52,6 +53,7 @@ export default function InvoicesPage() {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Number</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Amount</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Confidence</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -62,6 +64,7 @@ export default function InvoicesPage() {
                 <tr key={invoice.invoice_number} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">{invoice.vendor_name}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{invoice.invoice_number}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{invoice.invoice_date}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{invoice.total_amount}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{(invoice.confidence * 100).toFixed(2)}%</td>
                   <td className="px-6 py-4 whitespace-nowrap">{invoice.validation_status}</td>
