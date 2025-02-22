@@ -1,0 +1,13 @@
+[
+    {
+        "vendor_name": "Howard, Flores and Watkins",
+        "invoice_number": "IN_1062693",
+        "invoice_date": "2025-01-07",
+        "total_amount": "3963.79",
+        "confidence": 0.95,
+        "po_number": null,
+        "tax_amount": null,
+        "currency": null,
+        "validation_status": "valid"
+    }
+]
