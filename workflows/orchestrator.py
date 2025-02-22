@@ -57,7 +57,8 @@ class InvoiceProcessingWorkflow:
                 "confidence": extracted_data.confidence,
                 "po_number": extracted_data.po_number,
                 "tax_amount": extracted_data.tax_amount,
-                "currency": extracted_data.currency
+                "currency": extracted_data.currency,
+                "validation_status": "pending"  # Initialize with pending
             }
         except Exception as e:
             logger.error(f"Extraction failed after retries: {str(e)}")
@@ -80,11 +81,14 @@ class InvoiceProcessingWorkflow:
             validation_result = await self._retry_with_backoff(lambda: self.validation_agent.run(extracted_data))
             validation_time = monitoring.stop_timer("validation")
             logger.info(f"Validation completed: {validation_result}")
+            
+            # Always update validation status in extracted_dict
+            extracted_dict["validation_status"] = validation_result.status
+            
             if validation_result.status != "valid":
                 logger.warning(f"Skipping PO matching due to validation failure: {validation_result}")
                 invoice_entry = {
                     **extracted_dict,
-                    "validation_status": validation_result.status,
                     "validation_errors": validation_result.errors,
                     "matching_status": "skipped",
                     "review_status": "skipped",
