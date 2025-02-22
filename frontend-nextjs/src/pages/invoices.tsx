@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getInvoices } from '../lib/api';
+import { getInvoices } from "../../lib/api"; // Updated import path
 
 // Interface for type safety
 interface Invoice {
