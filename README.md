@@ -34,56 +34,57 @@ Establish a solid foundation for the 10-day development process.
 ```python 
 /clear_ledger_project
 ├── agents/
-│   ├── extractor_agent.py        # Extracts data from invoices
-│   ├── validator_agent.py        # Validates fields, anomaly detection
+│   ├── base_agent.py             # Base agent class for shared functionality
+│   ├── extractor_agent.py        # Extracts data from invoices using OpenAI GPT-4o-mini
+│   ├── validator_agent.py        # Validates fields and detects anomalies
 │   ├── matching_agent.py         # Matches POs using fuzzy logic
 │   ├── human_review_agent.py     # Routes flagged invoices for manual review
 │   └── fallback_agent.py         # Regex-based backup extraction
 │
 ├── api/
-│   ├── review_api.py             # FastAPI endpoints for human review
-│   └── app.py                    # Main FastAPI backend
+│   ├── app.py                    # Main FastAPI backend with upload and invoice retrieval endpoints
+│   ├── human_review_api.py       # FastAPI endpoints for human review (wrapper around review_api.py)
+│   └── review_api.py             # Core review API logic for manual corrections
 │
 ├── config/
 │   ├── settings.py               # API keys, paths, configs
-│   ├── logging_config.py         # Structured JSON logging
-│   └── monitoring.py             # Performance tracking
+│   ├── logging_config.py         # Structured JSON logging setup
+│   └── monitoring.py             # Performance tracking for agent workflows
 │
 ├── data/
 │   ├── raw/
-│   │   ├── invoices/             # 35 raw invoices (PDFs)
-│   │   └── test_samples/         # 3 error-case PDFs for RAG
+│   │   ├── invoices/             # 35 raw invoice PDFs
+│   │   ├── test_samples/         # 5 test-case PDFs for RAG (e.g., invoice_standard_example.pdf)
+│   │   └── vendor_data.csv       # PO reference data
 │   ├── processed/
-│   │   └── structured_invoices.json  # Processed results
-│   └── vendor_data.csv           # PO reference data
+│   │   ├── structured_invoices.json  # Processed invoice results
+│   │   └── corrections.json      # Human review corrections
+│   └── temp/                     # Temporary directory for uploaded PDFs
 │
 ├── data_processing/
-│   ├── document_parser.py        # PDF parsing & OCR
-│   ├── ocr_helper.py             # Pytesseract wrapper
-│   ├── anomaly_detection.py      # Flags outliers, duplicates
+│   ├── document_parser.py        # PDF parsing logic
+│   ├── ocr_helper.py             # Pytesseract wrapper for OCR
+│   ├── anomaly_detection.py      # Flags outliers and duplicates
 │   ├── confidence_scoring.py     # Computes extraction confidence
-│   └── rag_helper.py             # FAISS RAG for error detection
+│   └── rag_helper.py             # FAISS-based RAG for error detection
 │
 ├── models/
 │   ├── invoice.py                # Pydantic model for invoice data
 │   └── validation_schema.py      # Pydantic schema for data validation
 │
 ├── workflows/
-│   └── orchestrator.py           # Orchestrates the entire pipeline
+│   └── orchestrator.py           # Orchestrates the multi-agent pipeline
 │
-├── frontend/ (To Be Built)
-│   ├── app.py                    # Streamlit app (Day 7)
-│   └── components/               # Upload page, table view, review panel
+├── frontend/
+│   └── app.py                    # Streamlit frontend for upload, table, and review
 │
 ├── tests/
 │   ├── test_agents.py            # Unit tests for agents
-│   ├── test_workflows.py         # Integration tests
-│   └── load_tests.py             # Performance tests
+│   └── test_workflows.py         # Integration tests for workflows
 │
-├── Dockerfile                    # For Day 8 deployment
-├── requirements.txt              # Dependencies
-├── README.md                     # Documentation
-└── architecture_diagram.png      # System diagram
+├── requirements.txt              # Project dependencies
+├── README.md                     # Project documentation
+└── architecture_diagram.png      # System architecture diagram
 ```
 
 #### 🏁 Outcome
@@ -289,7 +290,7 @@ Additional Enhancements:
 
 ---
 
-## ✅ Completed (Days 1–3)
+## ✅ Completed (Days 1–4)
 - **InvoiceExtractionAgent:** Integration with Mistral 7B, strict JSON parsing, RAG integration, and fallback mechanisms
 - **InvoiceValidationAgent:** Field validation with anomaly detection
 - **PurchaseOrderMatchingAgent:** Fuzzy matching with vendor data and CSV fixes
@@ -297,10 +298,7 @@ Additional Enhancements:
 - **FAISS-based RAG:** Classification of error-prone invoices
 - **Async Processing & Error Handling:** Retries, structured logging, and enhanced error capture
 - **Monitoring:** Execution time tracking integrated into the pipeline
-
-## Day 4: Frontend Development
-
-- Successfully implemented the Streamlit frontend for uploading invoices, viewing processed data, and reviewing flagged cases (due to time constrains, I picked this option
+- **Frontend development:** Successfully implemented the Streamlit frontend for uploading invoices, viewing processed data, and reviewing flagged cases (due to time constrains, I picked this option
 instead of react/next.js)
 - Integrated the frontend with the FastAPI backend, allowing seamless communication between the UI and the invoice processing system.
 - Resolved issues with module imports and file paths, ensuring the system runs smoothly.
@@ -360,3 +358,4 @@ ollama run mistral:7b "test"
 ```bash
 python workflows/orchestrator.py
 ```
+
