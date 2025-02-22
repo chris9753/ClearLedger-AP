@@ -18,15 +18,29 @@ export default function UploadPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const processAllInvoices = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/api/process_all_invoices');
+      if (!response.ok) throw new Error('Failed to process invoices');
+      const data = await response.json();
+      alert(data.message);
+    } catch (err) {
+      console.error('Error processing invoices:', err);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!files) return;
 
     setLoading(true);
     setError(null);
+    console.log("Uploading file:", files[0].name);
     try {
       const data = await uploadInvoice(files);
+      console.log("API response:", data);
       setResponse(data);
+      console.log("Updated response state:", data);
     } catch (err) {
       setError('Upload failed. Please try again.');
     } finally {
@@ -55,6 +69,12 @@ export default function UploadPage() {
           </button>
         </div>
       </form>
+      <button
+        onClick={processAllInvoices}
+        className="mt-4 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+      >
+        Process All Invoices
+      </button>
       {error && <p className="text-red-500 mt-4">{error}</p>}
       {response && (
         <div className="bg-gray-100 p-4 rounded mt-4 space-y-2">
