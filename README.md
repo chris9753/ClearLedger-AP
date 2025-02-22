@@ -304,12 +304,104 @@ instead of react/next.js)
 - Resolved issues with module imports and file paths, ensuring the system runs smoothly.
 - Tested the end-to-end functionality, including uploading a PDF invoice, processing it, and reviewing the results.
 
+
+## New Frontend Branch: react-nextjs-frontend
+
+### Frontend Migration and Feature Enhancements
+Transitioned from Streamlit to a modern React/Next.js frontend while maintaining the FastAPI backend infrastructure.
+
+#### 🎯 Key Improvements
+1. **Enhanced Review Capabilities**
+   - Full invoice field editing (Vendor, Invoice Number, Date, Total Amount)
+   - Seamless updates via `/api/update_invoice` endpoint
+   - PDF viewing and preview functionality:
+     - New tab viewing with `/api/invoice_pdf/{invoice_number}`
+     - Inline previews using `react-pdf`
+     - Enhanced PDF file handling in `data/processed/`
+
+2. **Data Management**
+   - Implemented deduplication logic in `save_invoice`
+   - Automatic overwrite of existing entries with same `invoice_number`
+   - Clean metrics display without duplicates
+
+3. **RAG Helper Integration**
+   - Full integration with processing workflow
+   - Improved accuracy in both single and batch processing
+   - Reduced manual review requirements
+   - Matching previous Streamlit performance benchmarks
+
+4. **Metrics Improvements**
+   - Accurate "Valid Invoices" counting
+   - Fixed `validation_status` propagation
+   - Added processing time tracking
+   - Eliminated "unknown" status occurrences
+
+#### 🐛 Bug Fixes and Optimizations
+- Resolved invoice date display issues across all pages
+- Fixed validation status propagation
+- Optimized PDF access and file paths
+- Enhanced batch processing efficiency
+- Refined CORS settings for security
+
+#### 🔧 Technical Updates
+- FormData handling improvements
+- Path corrections for file operations
+- Enhanced error handling and logging
+- Optimized state management
+
+### Current State
+
+#### 📤 Upload Functionality
+- Reliable single and batch uploads
+- Complete data display
+- Effective deduplication
+
+#### 📋 Pages Overview
+1. **Invoices Page**
+   - Complete invoice listing
+   - Accurate status indicators
+   - Duplicate-free display
+
+2. **Review Page**
+   - Comprehensive field editing
+   - PDF viewing options
+   - Seamless data updates
+
+3. **Metrics Page**
+   - Total invoice count
+   - Valid invoice tracking
+   - Processing time metrics
+   - Accurate status reporting
+
+#### 🔍 RAG Helper Performance
+- Successfully integrated
+- Enhanced accuracy
+- Reduced manual intervention
+- Consistent processing results
+
+### Future Enhancements
+1. **Performance**
+   - Batch processing optimization
+   - RAG helper edge case handling
+
+2. **Security**
+   - Production CORS refinement
+   - API endpoint authentication
+
+3. **Testing**
+   - Ongoing user feedback integration
+   - UX improvement monitoring
+
+4. **Documentation**
+   - Continuous updates
+   - Technical documentation expansion
+
 ---
 
 ## 🚀 Remaining Workflow (Days 5–10)
 
 ### Day 5 – Deployment & Post-Processing Analytics
-- Dockerize the application
+- Dockerize the applications (Both React/Next.js and Streamlit)
 - Set up CI/CD Pipeline with GitHub Actions
 - Develop an analytics dashboard for trends, anomalies, and key performance metrics
 
