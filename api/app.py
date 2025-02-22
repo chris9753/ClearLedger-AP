@@ -7,6 +7,7 @@ print("os imported")
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 print("Path adjusted")
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body
+from fastapi.responses import FileResponse
 print("FastAPI imported")
 from workflows.orchestrator import InvoiceProcessingWorkflow
 print("Workflow imported")
@@ -46,27 +47,48 @@ async def process_all_invoices():
     results = []
     for file in invoice_files:
         result = await workflow.process_invoice(file)
+        # Add validation status and total_time to extracted data before saving
+        if 'validation_result' in result and hasattr(result['validation_result'], 'status'):
+            result['extracted_data']['validation_status'] = result['validation_result'].status
+        else:
+            result['extracted_data']['validation_status'] = "unknown"
+            
+        if 'total_time' in result:
+            result['extracted_data']['total_time'] = result['total_time']
+            
         save_invoice(result['extracted_data'])
         results.append(result)
     return {"message": f"Processed {len(results)} invoices"}
 
 def save_invoice(invoice_data: dict):
-    """Save invoice data to the structured_invoices.json file."""
+    """Save invoice data to the structured_invoices.json file.
+    If an invoice with the same invoice_number exists, it will be updated instead of creating a duplicate."""
     try:
+        # Ensure validation_status exists
+        if 'validation_status' not in invoice_data:
+            invoice_data['validation_status'] = "unknown"
+            
         if not OUTPUT_FILE.exists():
             OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
             with OUTPUT_FILE.open('w') as f:
                 json.dump([], f)
+                
         with OUTPUT_FILE.open('r+') as f:
             try:
                 data = json.load(f)
             except json.JSONDecodeError:
                 data = []
+                
+            # Remove existing invoice with same number if it exists
+            data = [inv for inv in data if inv.get('invoice_number') != invoice_data.get('invoice_number')]
+            # Add the new/updated invoice
             data.append(invoice_data)
+            
+            # Write back to file
             f.seek(0)
             f.truncate()
             json.dump(data, f, indent=4)
-            print(f"Invoice saved successfully: {invoice_data.get('invoice_number', 'unknown')}")
+            print(f"Invoice saved/updated successfully: {invoice_data.get('invoice_number', 'unknown')}")
     except Exception as e:
         print(f"Error saving invoice: {e}")
         raise HTTPException(status_code=500, detail=f"Error saving invoice: {str(e)}")
@@ -80,6 +102,15 @@ async def upload_invoice(file: UploadFile = File(...)):
         with open(temp_path, "wb") as f:
             f.write(await file.read())
         result = await workflow.process_invoice(str(temp_path))
+        # Add validation status and total_time to extracted data before saving
+        if 'validation_result' in result and hasattr(result['validation_result'], 'status'):
+            result['extracted_data']['validation_status'] = result['validation_result'].status
+        else:
+            result['extracted_data']['validation_status'] = "unknown"
+            
+        if 'total_time' in result:
+            result['extracted_data']['total_time'] = result['total_time']
+            
         save_invoice(result['extracted_data'])
         temp_path.unlink()
         return result
@@ -101,6 +132,18 @@ async def get_invoices():
     except Exception as e:
         print(f"Error reading invoices: {e}")
         return []
+
+@app.get("/api/invoices/pdf/{invoice_number}")
+async def get_invoice_pdf(invoice_number: str):
+    """Serve invoice PDF file."""
+    pdf_path = Path(f"data/raw/invoices/{invoice_number}.pdf")
+    if not pdf_path.exists():
+        raise HTTPException(status_code=404, detail="Invoice PDF not found")
+    return FileResponse(
+        path=str(pdf_path),
+        media_type="application/pdf",
+        filename=f"{invoice_number}.pdf"
+    )
 
 class InvoiceUpdate(BaseModel):
     vendor_name: str
