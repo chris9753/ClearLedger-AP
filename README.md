@@ -31,20 +31,60 @@ Establish a solid foundation for the 10-day development process.
 
 - Defined project structure:
 
-  ```
- /clear_ledger_project
-├── agents/               → Core AI agents for extraction, validation, matching, etc.
-├── api/                  → FastAPI endpoints (for Human-in-the-Loop review, etc.)
-├── config/               → Settings, logging config, monitoring
-├── data/                 → Raw PDFs, processed data, test samples
-├── data_processing/      → Utilities: OCR, RAG helper, anomaly detection
-├── models/               → Pydantic data models (for type safety & validation)
-├── workflows/            → Orchestrator & pipeline managing agent workflows
-├── tests/                → Unit & integration tests
-├── Dockerfile            → For containerizing the app
-├── README.md             → Project documentation
-└── requirements.txt      → Python dependencies
-  ```
+```python 
+/clear_ledger_project
+├── agents/
+│   ├── extractor_agent.py        # Extracts data from invoices
+│   ├── validator_agent.py        # Validates fields, anomaly detection
+│   ├── matching_agent.py         # Matches POs using fuzzy logic
+│   ├── human_review_agent.py     # Routes flagged invoices for manual review
+│   └── fallback_agent.py         # Regex-based backup extraction
+│
+├── api/
+│   ├── review_api.py             # FastAPI endpoints for human review
+│   └── app.py                    # Main FastAPI backend
+│
+├── config/
+│   ├── settings.py               # API keys, paths, configs
+│   ├── logging_config.py         # Structured JSON logging
+│   └── monitoring.py             # Performance tracking
+│
+├── data/
+│   ├── raw/
+│   │   ├── invoices/             # 35 raw invoices (PDFs)
+│   │   └── test_samples/         # 3 error-case PDFs for RAG
+│   ├── processed/
+│   │   └── structured_invoices.json  # Processed results
+│   └── vendor_data.csv           # PO reference data
+│
+├── data_processing/
+│   ├── document_parser.py        # PDF parsing & OCR
+│   ├── ocr_helper.py             # Pytesseract wrapper
+│   ├── anomaly_detection.py      # Flags outliers, duplicates
+│   ├── confidence_scoring.py     # Computes extraction confidence
+│   └── rag_helper.py             # FAISS RAG for error detection
+│
+├── models/
+│   ├── invoice.py                # Pydantic model for invoice data
+│   └── validation_schema.py      # Pydantic schema for data validation
+│
+├── workflows/
+│   └── orchestrator.py           # Orchestrates the entire pipeline
+│
+├── frontend/ (To Be Built)
+│   ├── app.py                    # Streamlit app (Day 7)
+│   └── components/               # Upload page, table view, review panel
+│
+├── tests/
+│   ├── test_agents.py            # Unit tests for agents
+│   ├── test_workflows.py         # Integration tests
+│   └── load_tests.py             # Performance tests
+│
+├── Dockerfile                    # For Day 8 deployment
+├── requirements.txt              # Dependencies
+├── README.md                     # Documentation
+└── architecture_diagram.png      # System diagram
+```
 
 #### 🏁 Outcome
 - Initialized GitHub repository
