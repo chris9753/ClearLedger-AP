@@ -359,3 +359,99 @@ ollama run mistral:7b "test"
 python workflows/orchestrator.py
 ```
 
+---
+
+## 🔧 Setup and Usage Instructions
+
+### 📋 Project Overview
+The Clear Ledger AP is a comprehensive multi-agent solution featuring a Streamlit frontend and FastAPI backend. It's designed to streamline invoice processing through automated extraction, validation, PO matching, and human review workflows.
+
+### 📦 Prerequisites
+- Python 3.12 or higher
+- Virtual environment (recommended)
+- Git installed
+- Sample invoice PDFs and vendor data (provided in repository)
+
+### ⚙️ Setup Instructions
+1. **Clone the Repository**
+   ```bash
+   git clone <repository-url>
+   cd clear_ledger_project
+   ```
+
+2. **Create and Activate Virtual Environment**
+   ```bash
+   # Create virtual environment
+   python -m venv venv
+
+   # Activate it
+   # On Linux/Mac:
+   source venv/bin/activate
+   # On Windows:
+   venv\Scripts\activate
+   ```
+
+3. **Install Dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Verify Data Structure**
+   - Ensure sample PDFs exist in:
+     - `data/raw/invoices/` (main invoice directory)
+     - `data/test_samples/` (contains `invoice_standard_example.pdf`)
+   - Verify `data/raw/vendor_data.csv` is present
+
+### 🚀 Running the Application
+1. **Start the Backend Services**
+   Open three separate terminals and run:
+
+   ```bash
+   # Terminal 1: Main API
+   python -m uvicorn api.app:app --reload --port 8000
+
+   # Terminal 2: Human Review API
+   python -m uvicorn api.human_review_api:app --reload --port 8001
+
+   # Terminal 3: Streamlit Frontend
+   streamlit run frontend/app.py
+   ```
+
+2. **Access the Application**
+   - Open your browser and navigate to `http://localhost:8501`
+   - The main API will be available at `http://localhost:8000`
+   - The review API will be available at `http://localhost:8001`
+
+### 🧪 Testing the System
+
+1. **Upload and Process Invoices**
+   - Navigate to the "Upload" page
+   - Upload a sample PDF (e.g., `data/test_samples/invoice_standard_example.pdf`)
+   - Click "Submit" to process
+
+2. **View Results**
+   - "Invoices" page: Click "Refresh" to see processed invoices
+   - "Review" page: Check flagged invoices (confidence < 0.9 or validation errors)
+   - "Metrics" page: View performance data (extraction times, confidence scores)
+
+3. **Review and Correct**
+   - Review flagged invoices on the "Review" page
+   - Submit corrections if needed
+   - Monitor reprocessing status
+
+4. **Note on Faulty Invoice Handling**
+   - The system uses RAG (Retrieval-Augmented Generation) with a vector database to handle faulty invoices
+   - During processing, each invoice is compared against stored 'poor quality' examples from `data/test_samples/`
+   - This allows automatic identification and correction of common errors
+   - Many faulty invoices are processed with high confidence (≥0.9) without manual intervention
+   - Human review is only triggered for:
+     - Invoices with confidence scores below 0.9
+     - Significant validation errors not resolved by RAG
+
+### 📝 Important Notes
+- Extraction timing data is included in API responses and displayed in the metrics dashboard
+- Duplicate invoices (same invoice_number) are automatically flagged
+- Low confidence scores (< 0.9) trigger human review
+- The system processes PDFs asynchronously, so there might be a brief delay before results appear
+- All processing metrics and logs are stored for analysis
+
