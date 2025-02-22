@@ -88,5 +88,61 @@
         "po_number": null,
         "tax_amount": null,
         "currency": null
+    },
+    {
+        "vendor_name": "White-Mendoza",
+        "invoice_number": "IN_5796789",
+        "invoice_date": "2025-01-23",
+        "total_amount": "4808.18",
+        "confidence": 0.95,
+        "po_number": null,
+        "tax_amount": null,
+        "currency": null,
+        "validation_status": "valid",
+        "matching_status": "matched",
+        "review_status": "approved",
+        "extraction_time": 1.4975531101226807,
+        "validation_time": 0.0011196136474609375,
+        "matching_time": 0.0016810894012451172,
+        "review_time": 0.0002105236053466797,
+        "total_time": 1.5005643367767334
+    },
+    {
+        "vendor_name": "White-Mendoza",
+        "invoice_number": "IN_5796789",
+        "invoice_date": "2025-01-23",
+        "total_amount": "4808.18",
+        "confidence": 0.95,
+        "po_number": null,
+        "tax_amount": null,
+        "currency": null
+    },
+    {
+        "vendor_name": "Price Group",
+        "invoice_number": "IN_4082429",
+        "invoice_date": "2025-01-29",
+        "total_amount": "3063.05",
+        "confidence": 0.95,
+        "po_number": null,
+        "tax_amount": null,
+        "currency": null,
+        "validation_status": "valid",
+        "matching_status": "matched",
+        "review_status": "approved",
+        "extraction_time": 1.3409173488616943,
+        "validation_time": 0.0005340576171875,
+        "matching_time": 0.0010993480682373047,
+        "review_time": 0.00012612342834472656,
+        "total_time": 1.3426768779754639
+    },
+    {
+        "vendor_name": "Price Group",
+        "invoice_number": "IN_4082429",
+        "invoice_date": "2025-01-29",
+        "total_amount": "3063.05",
+        "confidence": 0.95,
+        "po_number": null,
+        "tax_amount": null,
+        "currency": null
     }
 ]
