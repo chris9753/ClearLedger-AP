@@ -16,6 +16,10 @@ print("Path imported")
 import uuid
 print("uuid imported")
 
+# Ensure temp directory exists at startup
+Path("data/temp").mkdir(parents=True, exist_ok=True)
+print("Temp directory ensured")
+
 app = FastAPI(title="Brim Invoice Processing API")
 print("App created")
 workflow = InvoiceProcessingWorkflow()
