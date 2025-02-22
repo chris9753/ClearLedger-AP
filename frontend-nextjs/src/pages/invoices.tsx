@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getInvoices } from "../../lib/api"; // Updated import path
+import { toast } from 'react-hot-toast';
 
 // Interface for type safety
 interface Invoice {
@@ -24,6 +25,7 @@ export default function InvoicesPage() {
       setInvoices(data);
     } catch (err) {
       setError('Failed to load invoices. Please try again.');
+      toast.error('Failed to load invoices: ' + (err instanceof Error ? err.message : ''));
     } finally {
       setLoading(false);
     }
