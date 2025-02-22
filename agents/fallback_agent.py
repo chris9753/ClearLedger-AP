@@ -5,6 +5,8 @@ from agents.base_agent import BaseAgent
 from models.invoice import InvoiceData
 from decimal import Decimal
 from config.logging_config import logger
+from data_processing.document_parser import extract_text_from_pdf
+from data_processing.ocr_helper import ocr_process_image
 
 class FallbackAgent(BaseAgent):
     def run(self, document_path: str) -> InvoiceData:
