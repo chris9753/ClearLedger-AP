@@ -25,6 +25,7 @@ export default function ReviewPage() {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   const fetchInvoices = async () => {
     setLoading(true);
@@ -84,6 +85,13 @@ export default function ReviewPage() {
     console.error('Error loading PDF:', error);
     setPdfError('Failed to load PDF');
   }
+
+  const previewInvoice = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setShowPreview(true);
+    setPdfError(null);
+    setNumPages(null);
+  };
 
   return (
     <div className="max-w-7xl mx-auto py-6">
@@ -179,7 +187,7 @@ export default function ReviewPage() {
                               View PDF
                             </a>
                             <button
-                              onClick={() => setSelectedInvoice(invoice)}
+                              onClick={() => previewInvoice(invoice)}
                               className="text-sm text-blue-600 hover:underline"
                             >
                               Preview
@@ -204,8 +212,19 @@ export default function ReviewPage() {
         </div>
         
         <div className="h-screen sticky top-0">
-          {selectedInvoice && (
-            <div className="border rounded-lg overflow-hidden h-full bg-white">
+          {showPreview && selectedInvoice && (
+            <div className="border rounded-lg overflow-hidden h-full bg-white p-4">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-semibold">
+                  Invoice: {selectedInvoice.invoice_number}
+                </h2>
+                <button 
+                  onClick={() => setShowPreview(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  Close
+                </button>
+              </div>
               {pdfError ? (
                 <div className="flex items-center justify-center h-full">
                   <p className="text-red-500">{pdfError}</p>
