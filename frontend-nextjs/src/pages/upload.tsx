@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { uploadInvoice } from "../../lib/api";  // Should now resolve correctly
+import { uploadInvoice } from "../../lib/api";  // Updated import path
 
 // Interface for type safety
 interface UploadResponse {
