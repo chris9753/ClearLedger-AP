@@ -27,6 +27,32 @@ print("Workflow instance created")
 
 OUTPUT_FILE = Path("data/processed/structured_invoices.json")
 
+def save_invoice(invoice_data: dict):
+    """Save invoice data to the structured_invoices.json file."""
+    try:
+        # Create the file with empty array if it doesn't exist
+        if not OUTPUT_FILE.exists():
+            OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
+            with OUTPUT_FILE.open('w') as f:
+                json.dump([], f)
+
+        # Read existing data, append new invoice, and write back
+        with OUTPUT_FILE.open('r+') as f:
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError:
+                data = []  # Start fresh if file is corrupted
+            
+            data.append(invoice_data)
+            f.seek(0)
+            f.truncate()
+            json.dump(data, f, indent=4)
+            print(f"Invoice saved successfully: {invoice_data.get('invoice_number', 'unknown')}")
+            
+    except Exception as e:
+        print(f"Error saving invoice: {e}")
+        raise HTTPException(status_code=500, detail=f"Error saving invoice: {str(e)}")
+
 @app.post("/api/upload_invoice")
 async def upload_invoice(file: UploadFile = File(...)):
     """Process an uploaded invoice PDF."""
@@ -35,7 +61,11 @@ async def upload_invoice(file: UploadFile = File(...)):
         temp_path.parent.mkdir(exist_ok=True)
         with open(temp_path, "wb") as f:
             f.write(await file.read())
+        
         result = await workflow.process_invoice(str(temp_path))
+        # Save the processed invoice data
+        save_invoice(result['extracted_data'])
+        
         temp_path.unlink()
         return result  # Returns full result including timings from orchestrator
     except Exception as e:
