@@ -48,3 +48,9 @@ export async function getInvoicePdf(invoiceId: string): Promise<Blob> {
     
     return response.blob();
 }
+
+export async function getAnomalies(): Promise<any> {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_MAIN_API_URL}/api/anomalies`);
+    if (!response.ok) throw new Error('Failed to fetch anomalies');
+    return response.json();
+}
