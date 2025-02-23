@@ -28,3 +28,23 @@ export async function getInvoices(): Promise<any> {
     if (!response.ok) throw new Error('Failed to fetch invoices');
     return response.json();
 }
+
+export async function getInvoicePdf(invoiceId: string): Promise<Blob> {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_MAIN_API_URL}/api/invoice_pdf/${invoiceId}`);
+    
+    if (!response.ok) {
+        if (response.status === 404) {
+            throw new Error('PDF not found for this invoice');
+        }
+        
+        const contentType = response.headers.get('Content-Type');
+        if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Failed to retrieve PDF');
+        }
+        
+        throw new Error('Failed to retrieve PDF');
+    }
+    
+    return response.blob();
+}
