@@ -29,7 +29,8 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-OUTPUT_FILE = Path("data/structured_invoice.json")
+# Update to use consistent path across the application
+INVOICES_FILE = Path("data/processed/structured_invoices.json")
 
 
 @app.get("/api/process_all_invoices")
@@ -46,36 +47,59 @@ async def process_all_invoices():
 
 
 def save_invoice(invoice_data: dict):
-    """Save invoice data to the structured_invoices.json file.\n    If an invoice with the same invoice_number exists, it will be updated instead of creating a duplicate."""
+    """Save invoice data to the structured_invoices.json file.
+    If an invoice with the same invoice_number exists, it will be updated instead of creating a duplicate."""
     try:
-        if not OUTPUT_FILE.exists():
-            OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
-            with OUTPUT_FILE.open('w') as f:
-                json.dump([], f)
-        with OUTPUT_FILE.open('r+') as f:
-            try:
+        os.makedirs(INVOICES_FILE.parent, exist_ok=True)
+        try:
+            with INVOICES_FILE.open('r') as f:
                 data = json.load(f)
-            except json.JSONDecodeError:
-                data = []
-            data = [inv for inv in data if inv.get('invoice_number') != invoice_data.get('invoice_number')]
+        except (FileNotFoundError, json.JSONDecodeError):
+            data = []
+            
+        # Check for existing invoice and update it
+        for idx, inv in enumerate(data):
+            if inv.get('invoice_number') == invoice_data.get('invoice_number'):
+                data[idx] = invoice_data
+                break
+        else:
+            # No existing invoice found, append new one
             data.append(invoice_data)
-            f.seek(0)
-            f.truncate()
+            
+        with INVOICES_FILE.open('w') as f:
             json.dump(data, f, indent=4)
     except Exception as e:
+        logger.error(f"Error saving invoice: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error saving invoice: {str(e)}")
 
 
 @app.post("/api/upload_invoice")
 async def upload_invoice(file: UploadFile = File(...)):
+    if not file.filename.lower().endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+
     temp_path = Path(f"data/temp/{uuid.uuid4()}.pdf")
     try:
         temp_path.parent.mkdir(exist_ok=True)
-        with open(temp_path, "wb") as f:
-            f.write(await file.read())
-        result = await workflow.process_invoice(str(temp_path))
+        content = await file.read()
         
-        # Save the PDF to data/processed using the invoice_number from extracted_data
+        # Basic PDF validation
+        if not content.startswith(b'%PDF'):
+            raise HTTPException(status_code=400, detail="Invalid PDF file format")
+            
+        with open(temp_path, "wb") as f:
+            f.write(content)
+            
+        try:
+            result = await workflow.process_invoice(str(temp_path))
+        except Exception as process_error:
+            logger.error(f"Error processing invoice {file.filename}: {str(process_error)}")
+            raise HTTPException(
+                status_code=422, 
+                detail=f"Failed to process invoice: {str(process_error)}"
+            )
+        
+        # Only save valid PDFs
         extracted_data = result.get('extracted_data')
         if extracted_data and extracted_data.get('invoice_number'):
             invoice_id = extracted_data['invoice_number']
@@ -83,26 +107,34 @@ async def upload_invoice(file: UploadFile = File(...)):
             os.makedirs("data/processed", exist_ok=True)
             import shutil
             shutil.copy(str(temp_path), pdf_save_path)
+            save_invoice(result['extracted_data'])
+        else:
+            logger.warning(f"Invalid invoice data from {file.filename}: {extracted_data}")
+            raise HTTPException(
+                status_code=422,
+                detail="Could not extract valid invoice data from file"
+            )
 
-        save_invoice(result['extracted_data'])
-        temp_path.unlink()
         return result
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions as is
     except Exception as e:
+        logger.error(f"Unexpected error processing {file.filename}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
+    finally:
         if temp_path.exists():
             temp_path.unlink()
-        raise HTTPException(status_code=500, detail=f"Error processing invoice: {str(e)}")
 
 
 @app.get("/api/invoices")
 async def get_invoices():
     try:
-        if not OUTPUT_FILE.exists():
+        if not INVOICES_FILE.exists():
             return []
-        with OUTPUT_FILE.open("r") as f:
+        with INVOICES_FILE.open("r") as f:
             return json.load(f)
-    except json.JSONDecodeError as e:
-        return []
     except Exception as e:
+        logger.error(f"Error reading invoices: {str(e)}")
         return []
 
 
@@ -126,10 +158,10 @@ class InvoiceUpdate(BaseModel):
 @app.put("/api/invoices/{invoice_id}")
 async def update_invoice(invoice_id: str, update_data: InvoiceUpdate):
     try:
-        if not OUTPUT_FILE.exists():
+        if not INVOICES_FILE.exists():
             raise HTTPException(status_code=404, detail="No invoices found")
             
-        with OUTPUT_FILE.open('r') as f:
+        with INVOICES_FILE.open('r') as f:
             invoices = json.load(f)
             
         # Find the invoice by ID
@@ -142,7 +174,7 @@ async def update_invoice(invoice_id: str, update_data: InvoiceUpdate):
         if invoice_index is None:
             raise HTTPException(
                 status_code=404, 
-                detail=f"Invoice {invoice_id} not found in {str(OUTPUT_FILE)}"
+                detail=f"Invoice {invoice_id} not found in {str(INVOICES_FILE)}"
             )
             
         # Update only the fields that were provided
@@ -150,7 +182,7 @@ async def update_invoice(invoice_id: str, update_data: InvoiceUpdate):
         invoices[invoice_index].update(update_dict)
         
         # Save the updated invoices back to file
-        with OUTPUT_FILE.open('w') as f:
+        with INVOICES_FILE.open('w') as f:
             json.dump(invoices, f, indent=4)
             
         return {
