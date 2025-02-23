@@ -7,6 +7,7 @@ from pathlib import Path
 from glob import glob
 from shutil import copyfile
 from typing import Optional, List
+from datetime import datetime  # Add datetime import
 from pydantic import BaseModel, Field
 from fastapi import FastAPI, UploadFile, File, HTTPException, status, WebSocket
 from fastapi.responses import FileResponse, JSONResponse
@@ -191,6 +192,13 @@ def validate_pdf_content(content: bytes) -> bool:
 @app.post("/api/upload_invoice")
 async def upload_invoice(file: UploadFile = File(...)):
     if not file.filename.lower().endswith('.pdf'):
+        anomaly_data = {
+            "file_name": file.filename,
+            "reason": "Invalid file type",
+            "timestamp": datetime.now().isoformat(),
+            "review_status": "needs_review"
+        }
+        save_anomaly(anomaly_data)
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
 
     temp_path = StorageConfig.get_temp_path()
@@ -199,6 +207,13 @@ async def upload_invoice(file: UploadFile = File(...)):
         
         # Validate PDF content
         if not validate_pdf_content(content):
+            anomaly_data = {
+                "file_name": file.filename,
+                "reason": "Invalid or corrupted PDF file",
+                "timestamp": datetime.now().isoformat(),
+                "review_status": "needs_review"
+            }
+            save_anomaly(anomaly_data)
             raise HTTPException(status_code=400, detail="Invalid or corrupted PDF file")
             
         with open(temp_path, "wb") as f:
@@ -351,3 +366,40 @@ async def update_invoice(invoice_id: str, update_data: InvoiceUpdate):
             status_code=500, 
             detail=f"Error updating invoice: {str(e)}"
         )
+
+@app.get("/api/anomalies")
+async def get_anomalies():
+    """Retrieve all anomalies from data/processed/anomalies.json"""
+    try:
+        if not StorageConfig.ANOMALIES_FILE.exists():
+            return []
+        with StorageConfig.ANOMALIES_FILE.open("r") as f:
+            return json.load(f)
+    except Exception as e:
+        logger.error(f"Error reading anomalies: {str(e)}")
+        return []
+
+def save_anomaly(anomaly_data: dict):
+    """Save anomaly data to the anomalies.json file"""
+    try:
+        os.makedirs(StorageConfig.PROCESSED_DIR, exist_ok=True)
+        try:
+            with StorageConfig.ANOMALIES_FILE.open('r') as f:
+                anomalies = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            anomalies = []
+            
+        # Check for existing anomaly and update it
+        for idx, anomaly in enumerate(anomalies):
+            if anomaly.get('file_name') == anomaly_data.get('file_name'):
+                anomalies[idx] = anomaly_data
+                break
+        else:
+            # No existing anomaly found, append new one
+            anomalies.append(anomaly_data)
+            
+        with StorageConfig.ANOMALIES_FILE.open('w') as f:
+            json.dump(anomalies, f, indent=4)
+    except Exception as e:
+        logger.error(f"Error saving anomaly: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error saving anomaly: {str(e)}")
