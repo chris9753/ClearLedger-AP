@@ -1,7 +1,7 @@
 # Defines the schema for an invoice (invoice number, total amount, vendor, etc.).
 
-from pydantic import BaseModel, Field, validator
-from datetime import date
+from pydantic import BaseModel, Field, field_validator
+from datetime import date, datetime
 from typing import Optional
 from decimal import Decimal
 
@@ -16,10 +16,22 @@ class InvoiceData(BaseModel):
     tax_amount: Optional[Decimal] = Field(None, description="Tax amount if specified")
     currency: Optional[str] = Field(None, description="Invoice currency code")
     
-    @validator("invoice_date", pre=True)
-    def parse_date(cls, value):
+    # Replace previous validator for invoice_date with stricter format check
+    @field_validator("invoice_date", mode="before")
+    def validate_invoice_date(cls, value):
         if isinstance(value, str):
-            return date.fromisoformat(value)
+            try:
+                # Ensure the date is in YYYY-MM-DD format
+                return datetime.strptime(value, "%Y-%m-%d").date()
+            except ValueError:
+                raise ValueError("Invoice date must be in YYYY-MM-DD format")
+        return value
+
+    # Validator for total_amount to ensure it's positive
+    @field_validator("total_amount")
+    def validate_total_amount(cls, value):
+        if value <= 0:
+            raise ValueError("Total amount must be positive")
         return value
 
     class Config:
