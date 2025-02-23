@@ -6,7 +6,9 @@ import uuid
 from pathlib import Path
 from glob import glob
 from shutil import copyfile
-from pydantic import BaseModel
+from typing import Optional
+from pydantic import BaseModel, Field
+from config.logging_config import logger  # Add logger import
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body
 from fastapi.responses import FileResponse
@@ -72,6 +74,16 @@ async def upload_invoice(file: UploadFile = File(...)):
         with open(temp_path, "wb") as f:
             f.write(await file.read())
         result = await workflow.process_invoice(str(temp_path))
+        
+        # Save the PDF to data/processed using the invoice_number from extracted_data
+        extracted_data = result.get('extracted_data')
+        if extracted_data and extracted_data.get('invoice_number'):
+            invoice_id = extracted_data['invoice_number']
+            pdf_save_path = f"data/processed/{invoice_id}.pdf"
+            os.makedirs("data/processed", exist_ok=True)
+            import shutil
+            shutil.copy(str(temp_path), pdf_save_path)
+
         save_invoice(result['extracted_data'])
         temp_path.unlink()
         return result
@@ -94,12 +106,12 @@ async def get_invoices():
         return []
 
 
-@app.get("/api/invoice_pdf/{invoice_number}")
-async def get_invoice_pdf(invoice_number: str):
-    pdf_path = f"data/processed/{invoice_number}.pdf"
+@app.get("/api/invoice_pdf/{invoice_id}")
+async def get_invoice_pdf(invoice_id: str):
+    pdf_path = f"data/processed/{invoice_id}.pdf"
     if not os.path.exists(pdf_path):
         raise HTTPException(status_code=404, detail="PDF not found")
-    return FileResponse(pdf_path, media_type="application/pdf", filename=f"{invoice_number}.pdf")
+    return FileResponse(pdf_path, media_type="application/pdf", filename=f"{invoice_id}.pdf")
 
 
 class InvoiceUpdate(BaseModel):
@@ -107,30 +119,49 @@ class InvoiceUpdate(BaseModel):
     invoice_number: str
     invoice_date: str
     total_amount: float
+    validation_status: Optional[str] = Field(default=None)
+    confidence: Optional[float] = Field(default=None)
 
 
-@app.put("/api/invoices/{invoice_number}")
-async def update_invoice(invoice_number: str, update_data: InvoiceUpdate):
+@app.put("/api/invoices/{invoice_id}")
+async def update_invoice(invoice_id: str, update_data: InvoiceUpdate):
     try:
         if not OUTPUT_FILE.exists():
             raise HTTPException(status_code=404, detail="No invoices found")
+            
         with OUTPUT_FILE.open('r') as f:
             invoices = json.load(f)
-        invoice_found = False
-        for invoice in invoices:
-            if invoice['invoice_number'] == invoice_number:
-                invoice.update({
-                    'vendor_name': update_data.vendor_name,
-                    'invoice_number': update_data.invoice_number,
-                    'invoice_date': update_data.invoice_date,
-                    'total_amount': update_data.total_amount
-                })
-                invoice_found = True
+            
+        # Find the invoice by ID
+        invoice_index = None
+        for idx, invoice in enumerate(invoices):
+            if invoice.get('invoice_number') == invoice_id:
+                invoice_index = idx
                 break
-        if not invoice_found:
-            raise HTTPException(status_code=404, detail=f"Invoice {invoice_number} not found")
+                
+        if invoice_index is None:
+            raise HTTPException(
+                status_code=404, 
+                detail=f"Invoice {invoice_id} not found in {str(OUTPUT_FILE)}"
+            )
+            
+        # Update only the fields that were provided
+        update_dict = update_data.dict(exclude_unset=True)
+        invoices[invoice_index].update(update_dict)
+        
+        # Save the updated invoices back to file
         with OUTPUT_FILE.open('w') as f:
             json.dump(invoices, f, indent=4)
-        return {"message": f"Invoice {invoice_number} updated successfully"}
+            
+        return {
+            "status": "success",
+            "message": f"Invoice {invoice_id} updated successfully",
+            "updated_invoice": invoices[invoice_index]
+        }
+        
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error updating invoice: {str(e)}")
+        logger.error(f"Error updating invoice {invoice_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error updating invoice: {str(e)}"
+        )
