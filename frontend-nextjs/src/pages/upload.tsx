@@ -42,13 +42,25 @@ export default function UploadPage() {
       const data = await uploadInvoice(files[0]);
       console.log("API response:", JSON.stringify(data, null, 2));
       setResponse(data);
-      toast.success('Invoice uploaded!'); // Show success notification
+      toast.success('Invoice uploaded successfully');
       console.log("Updated response state:", JSON.stringify(data, null, 2));
     } catch (err) {
-      setError('Upload failed. Please try again.');
-      toast.error('Upload failed: ' + (err instanceof Error ? err.message : '')); // Show error notification with details
+      console.error('Upload error:', err);
+      let errorMessage = 'Upload failed. ';
+      if (err instanceof Error) {
+        // Try to parse the error detail from the response
+        try {
+          const detail = JSON.parse(err.message);
+          errorMessage += detail.detail || err.message;
+        } catch {
+          errorMessage += err.message;
+        }
+      }
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
+      setFiles(null); // Reset file input after upload attempt
     }
   };
 
