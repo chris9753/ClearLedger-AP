@@ -96,7 +96,10 @@ async def get_invoices():
 
 @app.get("/api/invoice_pdf/{invoice_number}")
 async def get_invoice_pdf(invoice_number: str):
-    raise HTTPException(status_code=404, detail="PDF saving is disabled")
+    pdf_path = f"data/processed/{invoice_number}.pdf"
+    if not os.path.exists(pdf_path):
+        raise HTTPException(status_code=404, detail="PDF not found")
+    return FileResponse(pdf_path, media_type="application/pdf", filename=f"{invoice_number}.pdf")
 
 
 class InvoiceUpdate(BaseModel):
