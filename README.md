@@ -104,6 +104,7 @@ venv\Scripts\activate
 3. **Install Backend Dependencies**
 ```bash
 pip install -r requirements.txt
+sudo apt-get install libblas-dev liblapack-dev
 ```
 
 4. **Install Frontend Dependencies**
