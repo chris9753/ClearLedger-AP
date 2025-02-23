@@ -85,7 +85,7 @@ export default function UploadPage() {
           <p><span className="font-semibold">Vendor:</span> {response.extracted_data.vendor_name}</p>
           <p><span className="font-semibold">Invoice Number:</span> {response.extracted_data.invoice_number}</p>
           <p><span className="font-semibold">Date:</span> {response.extracted_data.invoice_date}</p>
-          <p><span className="font-semibold">Total Amount:</span> {response.extracted_data.total_amount}</p>
+          <p><span className="font-semibold">Total Amount:</span> £{response.extracted_data.total_amount}</p>
           <p><span className="font-semibold">Confidence:</span> {(response.extracted_data.confidence * 100).toFixed(2)}%</p>
           <p><span className="font-semibold">Status:</span> {response.extracted_data.validation_status}</p>
         </div>
