@@ -435,20 +435,65 @@ clear_ledger_nextjs/
 - ✅ Critical system improvements
 - ✅ Project Refinement and Optimization
 
-note: Tests: Manual testing was performed to ensure functionality. Automated tests were not implemented due to time constraints but are recommended for future development and CI/CD integration.
-
 ### Remaining Tasks (Days 7-8)
 
 - 📋 Day 7: Dockerize, CI/CD, and Documentation & Testing
 - 📋 Day 8: Performance Optimization & Submission
 
-### Recent Enhancements
+## Future Enhancement: Database-Backed Invoice Management
 
-- 🆕 Form validation (react-hook-form + yup)
-- 🆕 Toast notifications (react-hot-toast)
-- 🆕 PDF preview system (react-pdf)
-- 🆕 Enhanced error handling and WebSocket stability
-- 🆕 Removed unused SVGs and confirmed anomalies page integration
+### Context
+The current system uses a file-based approach (`data/raw/invoices/`) for simplicity within the 10-day challenge. However, with an expected volume of 5,000 monthly invoices, a scalable solution was carefully considered during the architectural design phase.
+
+### Proposed Solution
+
+#### Database & Storage Architecture
+- **Database**: PostgreSQL (SQL) or MongoDB (NoSQL)
+  - Store invoice metadata (invoice number, vendor, date, total, status)
+  - Maintain file references and processing history
+  - Enable efficient querying and reporting
+- **Object Storage**: AWS S3 or Local File Server
+  - Secure PDF document storage
+  - Scalable capacity for growing document volumes
+  - Built-in redundancy and backup capabilities
+
+#### Implementation Steps
+1. **Database Setup** (1-2 days)
+   - Configure PostgreSQL with optimized schema
+   - Implement invoice metadata tables
+   - Set up indexing for frequent queries
+
+2. **Object Storage Integration** (1 day)
+   - Configure S3 bucket or local storage
+   - Implement secure file upload/download
+   - Set up access controls and monitoring
+
+3. **API Updates** (1-2 days)
+   - Modify FastAPI endpoints for database operations
+   - Implement storage URL generation
+   - Update PDF serving mechanism
+
+4. **Frontend Adjustments** (1 day)
+   - Update Next.js components for database queries
+   - Implement PDF viewing via storage URLs
+   - Enhance search and filter capabilities
+
+#### Benefits
+- **Scalability**: Efficiently handle thousands of monthly invoices
+- **Performance**: Fast querying and retrieval of invoice data
+- **Security**: Enhanced access control and audit trails
+- **Reliability**: Automated backups and data redundancy
+- **Reporting**: Advanced analytics and custom report generation
+
+#### Why Not Implemented
+Time constraints prioritized delivering a functional system within the 10-day challenge. However, the current modular design allows for future integration of these enhancements without major refactoring.
+
+#### Implementation Roadmap
+Post-delivery phased approach:
+1. Phase 1: Database migration for metadata (Week 1-2)
+2. Phase 2: Object storage integration (Week 2-3)
+3. Phase 3: Frontend updates and testing (Week 3-4)
+4. Phase 4: Performance optimization and monitoring (Week 4)
 
 ## Troubleshooting Guide
 
