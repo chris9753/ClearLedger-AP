@@ -3,9 +3,9 @@
 <div align="center">
 
 [![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/downloads/)
-[![Node.js](https://img.shields.io/badge/Node.js-Latest-green.svg)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-20.x-green.svg)](https://nodejs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Latest-009688.svg)](https://fastapi.tiangolo.com/)
-[![Next.js](https://img.shields.io/badge/Next.js-Latest-black.svg)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-14.2.24-black.svg)](https://nextjs.org/)
 [![OpenAI](https://img.shields.io/badge/OpenAI-GPT4-412991.svg)](https://openai.com/)
 
 *An intelligent invoice processing system leveraging LangChain's multi-agent workflow*
@@ -122,9 +122,36 @@ This repository houses the Next.js frontend version of the Clear Ledger AP, buil
      - Issue: Multiple submission issues
      - Solution: Implemented proper loading states and safeguards
 
-### Day 6: Project Refinement and Optimization
-- **Objectives Achieved**: Streamlined project structure, removed redundant files, and optimized integration for production deployment.
-- **Technical Fixes**:
+#### Day 6: Stabilization and Bug Fixes
+- 🎯 **Objectives Achieved**
+  - Stabilized backend operations
+  - Resolved frontend compatibility issues
+  - Fixed critical bugs in processing pipeline
+  
+- 🛠️ **Technical Implementation**
+  1. **Backend Stabilization**
+     - Fixed `uvicorn.run()` configuration
+     - Optimized WebSocket connections
+     - Enhanced error logging
+
+  2. **Node.js Environment**
+     - Updated to Node.js 20
+     - Resolved dependency conflicts
+     - Converted Next.js configuration
+
+  3. **Frontend Fixes**
+     - Implemented proper PDF validation
+     - Enhanced review page logic
+     - Fixed invoice processing feedback
+     - Added robust error handling
+
+  4. **Configuration Updates**
+     - Migrated from `next.config.ts` to `next.config.js`
+     - Updated package dependencies
+     - Optimized build configuration
+
+
+- **More Technical Fixes**:
   - Merged `api/human_review_api.py` into `api/review_api.py`, consolidating review functionality into a single API module running on port 8000, eliminating redundancy.
   - Removed `workflows/pipeline.py` as its functionality is fully covered by `workflows/orchestrator.py`, ensuring a single, robust workflow manager.
   - Reviewed `frontend-nextjs/public/` directory and removed unnecessary SVG files (e.g., `file.svg`, `globe.svg`) not referenced in the application, reducing build size.
@@ -198,14 +225,10 @@ clear_ledger_nextjs/
 │   ├── tsconfig.json
 │   ├── lib/
 │   │   └── api.ts
-│   ├── public/
-│   │   └── next.svg
-│   │   └── vercel.svg
-│   │   └── window.svg
 │   └── src/
 │       ├── pages/
 │       │   ├── _app.tsx
-│       │   ├── anomalies.tsx  <!-- functional page for anomaly review -->
+│       │   ├── anomalies.tsx  
 │       │   ├── index.tsx
 │       │   ├── invoices.tsx
 │       │   ├── metrics.tsx
@@ -297,97 +320,91 @@ clear_ledger_nextjs/
 
 ### Prerequisites
 - Python 3.12+
-- Node.js (Latest LTS)
+- Node.js 20.x
 - Virtual environment tool
 - Git
+- OpenAI API key
 - Sample data files
 
-### Installation Steps
+### Step-by-Step Installation
 
 1. **Clone Repository**
-   ```bash
-   git clone <repository-url>
-   cd clear_ledger_nextjs
-   ```
+  ```bash
+  git clone <repository-url>
+  cd clear_ledger_nextjs
+  ```
 
-2. **Python Environment**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # Linux/Mac
-   # OR
-   venv\Scripts\activate     # Windows
-   ```
+2. **Create Environment File**
+  ```bash
+  # Create .env file in root directory
+  echo "OPENAI_API_KEY=your_api_key_here" > .env
+  ```
 
-3. **Backend Setup**
-   ```bash
-   pip install -r requirements.txt
-   sudo apt-get install libblas-dev liblapack-dev
-   ```
+3. **Setup Node.js**
+  ```bash
+  nvm install 20
+  nvm use 20
+  ```
 
-4. **Frontend Setup**
-   ```bash
-   cd frontend-nextjs
-   npm install
-   ```
+4. **Python Environment Setup**
+  ```bash
+  python -m venv venv
+  source venv/bin/activate  # Linux/Mac
+  # OR
+  venv\Scripts\activate     # Windows
+  pip install -r requirements.txt
+  sudo apt-get install libblas-dev liblapack-dev
+  ```
 
-5. **Environment Configuration**
-   ```bash
-   echo "OPENAI_API_KEY=your_api_key_here" > .env
-   ```
+5. **Frontend Installation**
+  ```bash
+  cd frontend-nextjs
+  npm install
+  ```
 
-6. **Data Verification**
-   - Confirm presence of:
-     - PDFs in `data/raw/invoices/`
-     - Test files in `data/raw/test_samples/`
-     - `data/raw/vendor_data.csv`
+6. **Start Services**
+  ```bash
+  # Terminal 1: Backend API
+  python -m uvicorn api.app:app --reload --port 8000
 
-## 🚀 Usage Guide
+  # Terminal 2: Frontend
+  cd frontend-nextjs
+  npm run dev
+  ```
 
-### Starting Services
-
-1. **Backend API**
-   ```bash
-   # Terminal 1: Main API (includes review functionality)
-   python -m uvicorn api.review_api:app --reload --port 8000
-   ```
-
-2. **Frontend Application**
-   ```bash
-   cd frontend-nextjs
-   npm run dev
-   ```
-
-### Accessing the System
-
-- **Main Application**: http://localhost:3000
-- **API Endpoints**:
-  - Main API: http://localhost:8000
+### System Access
+- Frontend: http://localhost:3000
+- API: http://localhost:8000
 
 ### Core Workflows
 
-1. **Invoice Processing**
-   - Navigate to http://localhost:3000/upload
-   - Upload invoice PDF(s)
-   - Monitor processing status
+1. **Process Invoices**
+  - Upload at `/upload`
+  - View at `/invoices`
+  - Review at `/review`
+  - Monitor at `/metrics`
 
-2. **Results Management**
-   - Processed invoices: `/invoices`
-   - Flagged items: `/review`
-   - Performance metrics: `/metrics`
+2. **System Features**
+  - Automatic duplicate detection
+  - Confidence scoring (≥0.9 auto-process, <0.9 review)
+  - Asynchronous processing
+  - Comprehensive logging
 
-3. **Review Process**
-   - Access review interface
-   - Edit flagged invoices
-   - Submit corrections
+### Dependencies
 
-### System Behavior
+#### Frontend
+- Next.js ^14.2.24
+- React ^18.2.0
+- React Hook Form ^7.50.1
+- TailwindCSS ^3.4.1
+- TypeScript ^5.3.3
 
-- **Duplicate Detection**: Automatic flagging by invoice_number
-- **Confidence Thresholds**:
-  - ≥0.9: Automatic processing
-  - <0.9: Human review required
-- **Processing Mode**: Asynchronous execution
-- **Data Persistence**: Metrics and logs maintained
+#### Backend
+- FastAPI
+- LangChain
+- OpenAI
+- PDFPlumber
+- Pytesseract
 
 ## 📈 Project Progress
 
@@ -400,7 +417,7 @@ clear_ledger_nextjs/
 - ✅ Day 6: Project Refinement and Optimization
 
 ### Remaining Tasks (Days 7-8)
-- 📋 Day 7: Documentation & Testing
+- 📋 Day 7: Dockerize, CI/CD, and Documentation & Testing
 - 📋 Day 8: Performance Optimization & Submission
 
 ### Recent Enhancements
@@ -409,6 +426,35 @@ clear_ledger_nextjs/
 - 🆕 PDF preview system (react-pdf)
 - 🆕 Enhanced error handling and WebSocket stability
 - 🆕 Removed unused SVGs and confirmed anomalies page integration
+
+## 🔍 Troubleshooting Guide
+
+### Common Issues and Solutions
+
+1. **Invalid PDF Processing**
+   - Issue: `TypeError: Cannot read properties of undefined (reading 'vendor_name')`
+   - Solution: Check if `extracted_data` exists before accessing properties
+   - Location: Review error handling in frontend PDF processing components
+
+2. **Invoice Processing List**
+   - Issue: 'Process All Invoices' not showing complete list
+   - Solution: Verify `/api/process_all_invoices` endpoint response
+   - Check: Frontend `fetchInvoices` implementation
+
+3. **Review Page Logic**
+   - Issue: Valid invoices appearing in review tab
+   - Solution: Adjust backend confidence threshold logic
+   - Location: Check review flagging criteria in `api/app.py`
+
+4. **Anomaly Detection**
+   - Issue: Invalid PDFs not appearing in anomalies
+   - Solution: Verify `_save_anomaly_entry` function
+   - Check: Frontend `fetchAnomalies` implementation
+
+5. **WebSocket Connection**
+   - Issue: Processing status updates not showing
+   - Solution: Ensure WebSocket connection is properly initialized
+   - Location: Check frontend WebSocket setup and error handling
 
 ---
 
