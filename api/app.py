@@ -1,5 +1,6 @@
 import sys
 import os
+import shutil
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,7 +34,6 @@ class ConnectionManager:
             self.active_connections.remove(websocket)
 
     async def broadcast(self, message: dict):
-        """Send message to all connected clients"""
         disconnected = []
         for connection in self.active_connections:
             try:
@@ -43,19 +43,11 @@ class ConnectionManager:
             except Exception as e:
                 logger.error(f"Error sending WebSocket message: {str(e)}")
                 disconnected.append(connection)
-        
-        # Clean up disconnected clients
         for connection in disconnected:
             self.disconnect(connection)
 
 # Initialize connection manager
 manager = ConnectionManager()
-
-# Initialize workflow
-workflow = InvoiceProcessingWorkflow()
-
-# Track active WebSocket connections
-active_connections: List[WebSocket] = []
 
 # CORS middleware configuration
 app.add_middleware(
@@ -77,7 +69,6 @@ class StorageConfig:
 
     @classmethod
     def initialize(cls):
-        """Create all necessary directories and initialize storage"""
         for directory in [cls.RAW_DIR, cls.PROCESSED_DIR, cls.TEMP_DIR]:
             directory.mkdir(parents=True, exist_ok=True)
         logger.info("Storage directories initialized")
@@ -93,9 +84,7 @@ class StorageConfig:
 # Initialize storage
 StorageConfig.initialize()
 
-# New helper function to process and save PDF content
 def process_invoice_and_save(pdf_content: bytes, invoice_id: str):
-    """Save PDF content to processed directory for the given invoice_id"""
     pdf_path = StorageConfig.get_pdf_path(invoice_id)
     with open(pdf_path, "wb") as f:
         f.write(pdf_content)
@@ -103,7 +92,6 @@ def process_invoice_and_save(pdf_content: bytes, invoice_id: str):
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):
-    """Custom exception handler to ensure consistent error responses"""
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.detail}
@@ -114,9 +102,7 @@ async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
-            # Keep the connection alive and handle incoming messages
             data = await websocket.receive_text()
-            # Echo back progress updates (useful for testing)
             await websocket.send_json({
                 "type": "progress",
                 "message": f"Received: {data}"
@@ -127,11 +113,9 @@ async def websocket_endpoint(websocket: WebSocket):
         logger.error(f"WebSocket error: {str(e)}")
         manager.disconnect(websocket)
 
-# Update the broadcast_progress function to use the manager
 async def broadcast_progress(message: dict):
     await manager.broadcast(message)
 
-# Update process_all_invoices to process all PDFs and send progress updates
 @app.post("/api/process_all_invoices")
 async def process_all_invoices():
     pdf_dir = Path("data/raw/invoices")
@@ -156,8 +140,9 @@ async def process_all_invoices():
         failed = 0
 
         for i, pdf_path in enumerate(pdf_files, 1):
+            temp_path = Path(f"data/temp/{uuid.uuid4()}.pdf")
             try:
-                # Send progress update via WebSocket
+                shutil.copy2(pdf_path, temp_path)
                 await manager.broadcast({
                     "type": "progress",
                     "current": i,
@@ -166,8 +151,7 @@ async def process_all_invoices():
                     "currentFile": pdf_path.name
                 })
 
-                # Process the invoice
-                result = await workflow.process_invoice(str(pdf_path))
+                result = await workflow.process_invoice(str(temp_path), save_pdf=False)
                 if result.get("status") == "error":
                     failed += 1
                     logger.error(f"Failed to process {pdf_path.name}: {result.get('message')}")
@@ -183,8 +167,10 @@ async def process_all_invoices():
                     "file": pdf_path.name,
                     "error": str(e)
                 })
+            finally:
+                if temp_path.exists():
+                    temp_path.unlink()  # Delete temp file
 
-        # Send completion message
         await manager.broadcast({
             "type": "complete",
             "message": f"Processed {processed} files, {failed} failed",
@@ -208,8 +194,6 @@ async def process_all_invoices():
         }
 
 def save_invoice(invoice_data: dict):
-    """Save invoice data to the structured_invoices.json file.
-    If an invoice with the same invoice_number exists, it will be updated instead of creating a duplicate."""
     try:
         os.makedirs(StorageConfig.INVOICES_FILE.parent, exist_ok=True)
         try:
@@ -217,35 +201,26 @@ def save_invoice(invoice_data: dict):
                 data = json.load(f)
         except (FileNotFoundError, json.JSONDecodeError):
             data = []
-            
-        # Check for existing invoice and update it
         for idx, inv in enumerate(data):
             if inv.get('invoice_number') == invoice_data.get('invoice_number'):
                 data[idx] = invoice_data
                 break
         else:
-            # No existing invoice found, append new one
             data.append(invoice_data)
-            
         with StorageConfig.INVOICES_FILE.open('w') as f:
             json.dump(data, f, indent=4)
     except Exception as e:
         logger.error(f"Error saving invoice: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error saving invoice: {str(e)}")
 
-
 def validate_pdf_content(content: bytes) -> tuple[bool, str]:
-    """Validate that content is a proper PDF file. Returns (is_valid, error_message)"""
-    # Check PDF magic number
     if not content.startswith(b'%PDF-'):
         return False, "File does not start with PDF header"
-    # Check for PDF end marker
     if not any(marker in content[-1024:] for marker in [b'%%EOF', b'%%EOF\n', b'%%EOF\r\n']):
         return False, "File is missing PDF end marker"
     return True, ""
 
 def save_anomaly(anomaly_data: dict):
-    """Save anomaly data to the anomalies.json file with timestamp"""
     try:
         os.makedirs(StorageConfig.PROCESSED_DIR, exist_ok=True)
         try:
@@ -253,22 +228,16 @@ def save_anomaly(anomaly_data: dict):
                 anomalies = json.load(f)
         except (FileNotFoundError, json.JSONDecodeError):
             anomalies = []
-            
-        # Add timestamp and ensure review_status exists
         anomaly_data.update({
             "timestamp": datetime.utcnow().isoformat(),
             "review_status": anomaly_data.get("review_status", "needs_review")
         })
-            
-        # Check for existing anomaly and update it
         for idx, anomaly in enumerate(anomalies):
             if anomaly.get('file_name') == anomaly_data.get('file_name'):
                 anomalies[idx] = anomaly_data
                 break
         else:
-            # No existing anomaly found, append new one
             anomalies.append(anomaly_data)
-            
         with StorageConfig.ANOMALIES_FILE.open('w') as f:
             json.dump(anomalies, f, indent=4)
         logger.info(f"Saved anomaly: {anomaly_data.get('file_name')}")
@@ -278,7 +247,6 @@ def save_anomaly(anomaly_data: dict):
 
 @app.post("/api/upload_invoice")
 async def upload_invoice(file: UploadFile = File(...)):
-    """Upload and process an invoice file"""
     if not file.filename:
         raise HTTPException(
             status_code=400,
@@ -288,11 +256,8 @@ async def upload_invoice(file: UploadFile = File(...)):
     temp_path = StorageConfig.get_temp_path()
     try:
         content = await file.read()
-        
-        # Validate PDF content
         is_valid_pdf, error_message = validate_pdf_content(content)
         if not is_valid_pdf:
-            # Save as anomaly when PDF is invalid
             anomaly_data = {
                 "file_name": file.filename,
                 "reason": f"Invalid PDF format: {error_message}",
@@ -311,10 +276,10 @@ async def upload_invoice(file: UploadFile = File(...)):
             f.write(content)
             
         try:
-            result = await workflow.process_invoice(str(temp_path))
+            workflow = InvoiceProcessingWorkflow()
+            result = await workflow.process_invoice(str(temp_path))  # Default save_pdf=True
             extracted_data = result.get('extracted_data')
             
-            # Check for extraction failure
             if not extracted_data:
                 anomaly_data = {
                     "file_name": file.filename,
@@ -330,7 +295,6 @@ async def upload_invoice(file: UploadFile = File(...)):
                     "type": "extraction_error"
                 }
             
-            # Check for missing invoice number
             if not extracted_data.get('invoice_number'):
                 anomaly_data = {
                     "file_name": file.filename,
@@ -346,12 +310,10 @@ async def upload_invoice(file: UploadFile = File(...)):
                     "type": "extraction_error"
                 }
             
-            # Save PDF using the helper function
             invoice_id = extracted_data['invoice_number']
             process_invoice_and_save(content, invoice_id)
             logger.info(f"Saved PDF for invoice {invoice_id}")
             
-            # Check confidence level for potential anomaly
             if extracted_data.get('confidence', 0) < 0.7:
                 anomaly_data = {
                     "file_name": file.filename,
@@ -374,7 +336,6 @@ async def upload_invoice(file: UploadFile = File(...)):
             
         except Exception as process_error:
             logger.error(f"Error processing invoice {file.filename}: {str(process_error)}")
-            # Save processing errors as anomalies
             anomaly_data = {
                 "file_name": file.filename,
                 "reason": f"Processing error: {str(process_error)}",
@@ -390,7 +351,6 @@ async def upload_invoice(file: UploadFile = File(...)):
             }
     except Exception as e:
         logger.error(f"Unexpected error processing {file.filename}: {str(e)}")
-        # Save unexpected errors as anomalies
         anomaly_data = {
             "file_name": file.filename,
             "reason": f"System error: {str(e)}",
@@ -419,10 +379,8 @@ async def get_invoices():
         logger.error(f"Error reading invoices: {str(e)}")
         return []
 
-
 @app.get("/api/invoice_pdf/{invoice_id}")
 async def get_invoice_pdf(invoice_id: str):
-    """Serve a processed invoice PDF file"""
     if not invoice_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -451,7 +409,6 @@ async def get_invoice_pdf(invoice_id: str):
         headers={"Cache-Control": "no-cache"}
     )
 
-
 class InvoiceUpdate(BaseModel):
     vendor_name: str
     invoice_number: str
@@ -459,7 +416,6 @@ class InvoiceUpdate(BaseModel):
     total_amount: float
     validation_status: Optional[str] = Field(default=None)
     confidence: Optional[float] = Field(default=None)
-
 
 @app.put("/api/invoices/{invoice_id}")
 async def update_invoice(invoice_id: str, update_data: InvoiceUpdate):
@@ -470,7 +426,6 @@ async def update_invoice(invoice_id: str, update_data: InvoiceUpdate):
         with StorageConfig.INVOICES_FILE.open('r') as f:
             invoices = json.load(f)
             
-        # Find the invoice by ID
         invoice_index = None
         for idx, invoice in enumerate(invoices):
             if invoice.get('invoice_number') == invoice_id:
@@ -483,11 +438,9 @@ async def update_invoice(invoice_id: str, update_data: InvoiceUpdate):
                 detail=f"Invoice {invoice_id} not found in {str(StorageConfig.INVOICES_FILE)}"
             )
             
-        # Update only the fields that were provided
         update_dict = update_data.dict(exclude_unset=True)
         invoices[invoice_index].update(update_dict)
         
-        # Save the updated invoices back to file
         with StorageConfig.INVOICES_FILE.open('w') as f:
             json.dump(invoices, f, indent=4)
             
@@ -506,7 +459,6 @@ async def update_invoice(invoice_id: str, update_data: InvoiceUpdate):
 
 @app.get("/api/anomalies")
 async def get_anomalies():
-    """Retrieve all anomalies from data/processed/anomalies.json"""
     try:
         if not StorageConfig.ANOMALIES_FILE.exists():
             return []
@@ -523,7 +475,7 @@ if __name__ == "__main__":
          host="0.0.0.0",
          port=8000,
          reload=True,
-         ws='auto',  # Enable WebSocket support
+         ws='auto',
          ws_ping_interval=20.0,
          ws_ping_timeout=20.0
     )
