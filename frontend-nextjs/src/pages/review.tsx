@@ -5,12 +5,13 @@ import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { getInvoicePdf } from '../../lib/api';
 
-// Updated Yup schema
+// Updated Yup schema to expect invoice_date as string
 const schema = yup.object().shape({
   vendor_name: yup.string().required('Vendor name is required'),
   total_amount: yup.number().positive('Total must be positive').required('Total is required'),
   invoice_number: yup.string().required('Invoice number is required'),
-  invoice_date: yup.date().required('Invoice date is required'),
+  invoice_date: yup.string().required('Invoice date is required')
+    .matches(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
 });
 
 interface Invoice {
@@ -21,13 +22,13 @@ interface Invoice {
   invoice_date: string;
 }
 
-// Add new interface for form inputs to match Yup schema
-interface FormInputs {
+// Update FormInputs type to use string for invoice_date
+type FormInputs = {
   vendor_name: string;
   total_amount: number;
   invoice_number: string;
-  invoice_date: Date;
-}
+  invoice_date: string;
+};
 
 export default function ReviewPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -88,6 +89,7 @@ export default function ReviewPage() {
       const data = await response.json();
       setInvoices(data);
     } catch (err) {
+      console.error('Error fetching invoices:', err);
       setError('Failed to load invoices. Please try again.');
     } finally {
       setLoading(false);
@@ -98,8 +100,8 @@ export default function ReviewPage() {
     fetchInvoices();
   }, []);
 
-  // Updated onSubmit function to format date fields as yyyy-MM-dd before sending to backend
-  const onSubmit = async (data: FormInputs) => {
+  // Updated onSubmit function with proper type instead of any
+  const onSubmit: (data: FormInputs) => Promise<void> = async (data: FormInputs) => {
     setLoading(true);
     try {
       const invoiceId = selectedInvoice?.invoice_number;
@@ -107,7 +109,8 @@ export default function ReviewPage() {
 
       const formattedData = {
         ...data,
-        invoice_date: new Date(data.invoice_date).toISOString().split('T')[0],
+        // Assume data.invoice_date is a string in YYYY-MM-DD format
+        invoice_date: data.invoice_date,
         invoice_number: invoiceId
       };
 
@@ -170,18 +173,26 @@ export default function ReviewPage() {
 }
 
 // New component for the form section using react-hook-form
-function FormSection({ selectedInvoice, onSubmit, setSelectedInvoice, loading }: { selectedInvoice: Invoice, onSubmit: (data: any) => Promise<void>, setSelectedInvoice: (inv: Invoice | null) => void, loading: boolean }) {
+function FormSection({ 
+  selectedInvoice, 
+  onSubmit, 
+  setSelectedInvoice, 
+  loading 
+}: { 
+  selectedInvoice: Invoice;
+  onSubmit: (data: FormInputs) => Promise<void>;
+  setSelectedInvoice: (inv: Invoice | null) => void;
+  loading: boolean;
+}) {
   const { register, handleSubmit, formState: { errors }, reset } = useForm<FormInputs>({
-    resolver: yupResolver(schema),
-    // Remove defaultValues here; they'll be set via useEffect
+    resolver: yupResolver(schema)
   });
 
   useEffect(() => {
     if (selectedInvoice) {
-      // Convert invoice_date from string to Date to satisfy the Yup schema
       reset({
         ...selectedInvoice,
-        invoice_date: new Date(selectedInvoice.invoice_date)
+        invoice_date: selectedInvoice.invoice_date // Keep as string, no Date conversion
       });
     }
   }, [selectedInvoice, reset]);
