@@ -1,16 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getInvoices } from '../../lib/api';
+import { Invoice } from '../types';  // Import Invoice from types.ts
 import { toast } from 'react-hot-toast';
-
-// Interface for type safety
-interface Invoice {
-  invoice_number: string;
-  vendor_name: string;
-  total_amount: number;
-  confidence: number;
-  validation_status: string;
-  total_time?: number;  // Added total_time field
-}
 
 export default function MetricsPage() {
   const [metrics, setMetrics] = useState<{
@@ -26,15 +17,17 @@ export default function MetricsPage() {
     setLoading(true);
     setError(null);
     try {
-      const invoices: Invoice[] = await getInvoices();
+      const invoices = await getInvoices() as Invoice[];
       const total = invoices.length;
-      const valid = invoices.filter((i) => i.validation_status === 'valid').length;
+      const valid = invoices.filter((invoice: Invoice) => invoice.validation_status === 'valid').length;
       
       // Calculate average processing time using total_time
-      const avgTime = invoices.reduce((sum, inv) => sum + (inv.total_time || 0), 0) / total;
+      const avgTime = invoices.reduce((sum: number, invoice: Invoice) => 
+        sum + (invoice.total_time || 0), 0) / total;
       
       // Calculate high confidence percentage (confidence > 0.8 is considered high)
-      const highConfidenceCount = invoices.filter((i) => i.confidence > 0.8).length;
+      const highConfidenceCount = invoices.filter((invoice: Invoice) => 
+        invoice.confidence > 0.8).length;
       const highConfidencePct = (highConfidenceCount / total) * 100;
 
       setMetrics({ 
