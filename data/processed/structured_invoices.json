@@ -1,0 +1,22 @@
+[
+    {
+        "vendor_name": "Solis Incs",
+        "invoice_number": "IN_5666658",
+        "invoice_date": "2025-02-17",
+        "total_amount": 4296.07,
+        "confidence": 0.95,
+        "po_number": null,
+        "tax_amount": null,
+        "currency": null,
+        "validation_status": "valid"
+    },
+    {
+        "status": "error",
+        "message": "[<class 'decimal.ConversionSyntax'>]",
+        "extraction_time": 8.736196517944336,
+        "validation_time": 0,
+        "matching_time": 0,
+        "review_time": 0,
+        "total_time": 8.736196517944336
+    }
+]
