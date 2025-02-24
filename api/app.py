@@ -1,6 +1,8 @@
-from fastapi.middleware.cors import CORSMiddleware
 import sys
 import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from fastapi.middleware.cors import CORSMiddleware
 import json
 import uuid
 from pathlib import Path
