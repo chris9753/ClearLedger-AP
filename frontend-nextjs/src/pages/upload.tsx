@@ -140,18 +140,37 @@ export default function UploadPage() {
 
   const handleProcessAll = async () => {
     setIsProcessingAll(true);
+    setProcessingStatus({
+      current: 0,
+      total: 0,
+      failed: 0
+    });
+    
     try {
-      const response = await fetch('http://localhost:8000/api/process_all_invoices', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_MAIN_API_URL}/api/process_all_invoices`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
       });
-      if (!response.ok) throw new Error(await response.text());
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText);
+      }
+      
       const data = await response.json();
-      alert(data.message || "Invoices processed successfully");
+      
+      if (data.status === 'error') {
+        throw new Error(data.message);
+      }
+      
+      toast.success(data.message || "Invoices processed successfully");
+      
+      // Redirect to invoices page after successful processing
+      window.location.href = '/invoices';
     } catch (error: unknown) {
       console.error('Error processing invoices:', error);
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      alert('Failed to process invoices: ' + errorMessage);
+      toast.error('Failed to process invoices: ' + errorMessage);
+      setProcessingStatus(null);
     } finally {
       setIsProcessingAll(false);
     }
