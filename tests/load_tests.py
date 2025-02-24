@@ -1,1 +1,0 @@
-# benchmarks and optimization notes
