@@ -1,6 +1,11 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import json
+from dotenv import load_dotenv
+import os
+
+# Load environment variables
+load_dotenv()
 
 app = FastAPI(title="Invoice Human Review API")
 
