@@ -13,7 +13,15 @@ export default function InvoicesPage() {
     setError(null);
     try {
       const data = await getInvoices();
-      setInvoices(data as Invoice[]);
+      if (Array.isArray(data)) {
+        // Sort invoices by date in descending order
+        const sortedInvoices = [...data].sort((a: Invoice, b: Invoice) => {
+          return new Date(b.invoice_date).getTime() - new Date(a.invoice_date).getTime();
+        });
+        setInvoices(sortedInvoices);
+      } else {
+        throw new Error('Invalid response format');
+      }
     } catch (err) {
       setError('Failed to load invoices. Please try again.');
       toast.error('Failed to load invoices: ' + (err instanceof Error ? err.message : ''));
@@ -22,9 +30,22 @@ export default function InvoicesPage() {
     }
   };
 
+  // Fetch invoices on mount and every 5 seconds when loading is true
   useEffect(() => {
     fetchInvoices();
-  }, []);
+    
+    // Set up polling when loading is true
+    let pollInterval: NodeJS.Timeout;
+    if (loading) {
+      pollInterval = setInterval(fetchInvoices, 5000);
+    }
+
+    return () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+    };
+  }, [loading]);
 
   return (
     <div className="max-w-7xl mx-auto py-6">
@@ -38,8 +59,16 @@ export default function InvoicesPage() {
           {loading ? 'Refreshing...' : 'Refresh'}
         </button>
       </div>
+      
       {error && <p className="text-red-500 mb-4">{error}</p>}
-      {invoices.length > 0 ? (
+      
+      {loading && <p className="text-gray-500 text-center py-4">Loading invoices...</p>}
+
+      {!loading && invoices.length === 0 && (
+        <p className="text-gray-500 text-center py-8">No invoices found.</p>
+      )}
+
+      {invoices.length > 0 && (
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -66,8 +95,6 @@ export default function InvoicesPage() {
             </tbody>
           </table>
         </div>
-      ) : (
-        <p className="text-gray-500 text-center py-8">No invoices found.</p>
       )}
     </div>
   );
