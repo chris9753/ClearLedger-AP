@@ -1,32 +1,24 @@
 # 📊 Clear Ledger AP (Next.js Frontend)
 
-<div align="center">
-
 [![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![Node.js](https://img.shields.io/badge/Node.js-20.x-green.svg)](https://nodejs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Latest-009688.svg)](https://fastapi.tiangolo.com/)
 [![Next.js](https://img.shields.io/badge/Next.js-14.2.24-black.svg)](https://nextjs.org/)
 [![OpenAI](https://img.shields.io/badge/OpenAI-GPT4-412991.svg)](https://openai.com/)
 
-*An intelligent invoice processing system leveraging LangChain's multi-agent workflow*
+## Overview
 
-[Overview](#-overview) •
-[Features](#-key-features) •
-[Development Journey](#-development-journey) •
-[Architecture](#-architecture) •
-[Setup Guide](#-setup-guide) •
-[Usage](#-usage-guide) •
-[Progress](#-project-progress)
+An intelligent invoice processing system leveraging LangChain's multi-agent workflow
 
-</div>
+[Overview](#overview) •
+[Features](#key-features) •
+[Development Journey](#development-journey) •
+[Architecture](#architecture) •
+[Setup Guide](#setup-guide) •
+[Usage Guide](#core-workflows) •
+[Progress](#project-progress)
 
-## 🎯 Overview
-
-This repository houses the Next.js frontend version of the Clear Ledger AP, built as a technical challenge response. The system demonstrates an intelligent solution that leverages LangChain's multi-agent workflow to automate invoice processing, aiming to reduce manual processing time by 75% while minimizing errors.
-
-> 💡 *A Streamlit frontend version is available in a separate repository for those interested in a simpler, Python-based interface.*
-
-## 📋 Key Features
+## Key Features
 
 - **Automated Processing Pipeline**
   - Processes PDFs from configurable directories:
@@ -48,16 +40,17 @@ This repository houses the Next.js frontend version of the Clear Ledger AP, buil
   - Comprehensive test coverage
   - Containerized deployment ready
 
-## 📅 Development Journey
+## Development Journey
 
 ### Week 1: Foundation & Core Development
 
 #### Day 1: Project Planning and Setup
+
 - 🎯 **Objectives Achieved**
   - Organized detailed 10-day development roadmap
   - Analyzed technical challenge requirements
   - Initialized project structure
-  
+
 - 🛠️ **Technical Implementation**
   - Set up FastAPI backend and Next.js frontend
   - Installed core dependencies:
@@ -66,20 +59,22 @@ This repository houses the Next.js frontend version of the Clear Ledger AP, buil
     - OCR capabilities (pytesseract)
 
 #### Day 2: Invoice Processing Foundation
+
 - 🎯 **Objectives Achieved**
   - Implemented core extraction logic
   - Established validation framework
-  
+
 - 🛠️ **Technical Implementation**
   - Developed InvoiceExtractionAgent with Pydantic models
   - Implemented PDF parsing and OCR pipeline
   - Created validation system with anomaly detection
 
 #### Day 3: Intelligence & Error Handling
+
 - 🎯 **Objectives Achieved**
   - Enhanced system reliability
   - Improved extraction accuracy
-  
+
 - 🛠️ **Technical Implementation**
   - Integrated FAISS-based RAG for error handling
   - Migrated from Mistral 7B to OpenAI's gpt-4o-mini API
@@ -87,42 +82,45 @@ This repository houses the Next.js frontend version of the Clear Ledger AP, buil
   - Added fallback mechanisms
 
 #### Day 4: Advanced Features & Frontend
+
 - 🎯 **Objectives Achieved**
   - Completed PO matching system
   - Enhanced user interface
-  
+
 - 🛠️ **Technical Implementation**
   - Built PurchaseOrderMatchingAgent with fuzzy matching
   - Migrated from Streamlit to Next.js
   - Implemented advanced frontend features
 
 #### Day 5: System Refinement
+
 - 🎯 **Objectives Achieved**
   - Resolved critical system issues
   - Enhanced user experience
-  
+
 - 🛠️ **Technical Fixes**
   1. **WebSocket Connectivity**
      - Issue: Connection failures during batch processing
      - Solution: Implemented proper WebSocket handling
-     
+
   2. **File Upload Reliability**
      - Issue: 422 errors with invalid files
      - Solution: Enhanced error handling and user feedback
-     
+
   3. **PDF Viewing System**
      - Issue: 404 errors in PDF preview
      - Solution: Restructured PDF storage and serving
-     
+
   4. **Data Format Consistency**
      - Issue: Date format inconsistencies
      - Solution: Standardized date handling (yyyy-MM-dd)
-     
+
   5. **Batch Processing UX**
      - Issue: Multiple submission issues
      - Solution: Implemented proper loading states and safeguards
 
 #### Day 6: Stabilization and Bug Fixes
+
 - 🎯 **Objectives Achieved**
   - Stabilized backend operations
   - Resolved frontend compatibility issues
@@ -130,7 +128,7 @@ This repository houses the Next.js frontend version of the Clear Ledger AP, buil
   - Resolved batch processing stalls
   - Restored PDF viewing functionality
   - Fixed infinite loading issues
-  
+
 - 🛠️ **Technical Implementation**
   1. **Backend Stabilization**
      - Fixed `uvicorn.run()` configuration
@@ -171,10 +169,11 @@ This repository houses the Next.js frontend version of the Clear Ledger AP, buil
   - Verified `frontend-nextjs/src/pages/anomalies.tsx` integration, confirming it’s linked to the backend via `lib/api.ts` for anomaly retrieval, and kept as a functional page.
   - Ensured `lib/api.ts` only handles API client logic without duplicating backend processing, maintaining clear separation of concerns.
 
-## 🏗️ Architecture
+## Architecture
 
 ### Project Structure
-```
+
+```plaintext
 clear_ledger_nextjs/
 ├── Dockerfile
 ├── main.py
@@ -271,8 +270,10 @@ clear_ledger_nextjs/
     └── __pycache__/
         └── … (compiled files)
 ```
+
 ### Architecture Diagram
-```
+
+```plaintext
 +-------------------+       +-------------------+
 |   Streamlit UI    |       |    Next.js UI     |
 | (Python-based)    |       | (Production-ready)|
@@ -329,9 +330,10 @@ clear_ledger_nextjs/
                 +------+------+
 ```
 
-## 🔧 Setup Guide
+## Setup Guide
 
 ### Prerequisites
+
 - Python 3.12+
 - Node.js 20.x
 - Virtual environment tool
@@ -342,72 +344,80 @@ clear_ledger_nextjs/
 ### Step-by-Step Installation
 
 1. **Clone Repository**
-  ```bash
-  git clone <repository-url>
-  cd clear_ledger_nextjs
-  ```
+
+   ```bash
+   git clone <repository-url>
+   cd clear_ledger_nextjs
+   ```
 
 2. **Create Environment File**
-  ```bash
-  # Create .env file in root directory
-  echo "OPENAI_API_KEY=your_api_key_here" > .env
-  ```
+
+   ```bash
+   # Create .env file in root directory
+   echo "OPENAI_API_KEY=your_api_key_here" > .env
+   ```
 
 3. **Setup Node.js**
-  ```bash
-  nvm install 20
-  nvm use 20
-  ```
+
+   ```bash
+   nvm install 20
+   nvm use 20
+   ```
 
 4. **Python Environment Setup**
-  ```bash
-  python -m venv venv
-  source venv/bin/activate  # Linux/Mac
-  # OR
-  venv\Scripts\activate     # Windows
-  pip install -r requirements.txt
-  sudo apt-get install libblas-dev liblapack-dev
-  ```
+
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # Linux/Mac
+   # OR
+   venv\Scripts\activate     # Windows
+   pip install -r requirements.txt
+   sudo apt-get install libblas-dev liblapack-dev
+   ```
 
 5. **Frontend Installation**
-  ```bash
-  cd frontend-nextjs
-  npm install
-  ```
+
+   ```bash
+   cd frontend-nextjs
+   npm install
+   ```
 
 6. **Start Services**
-  ```bash
-  # Terminal 1: Backend API
-  python -m uvicorn api.app:app --reload --port 8000
 
-  # Terminal 2: Frontend
-  cd frontend-nextjs
-  npm run dev
-  ```
+   ```bash
+   # Terminal 1: Backend API
+   python -m uvicorn api.app:app --reload --port 8000
+
+   # Terminal 2: Frontend
+   cd frontend-nextjs
+   npm run dev
+   ```
 
 > **Important Note**: If batch processing stalls, ensure a stable server connection and consider increasing WebSocket timeout settings (`ws_ping_interval`, `ws_ping_timeout`) in `api/app.py`.
 
 ### System Access
-- Frontend: http://localhost:3000
-- API: http://localhost:8000
+
+- Frontend: [http://localhost:3000](http://localhost:3000)
+- API: [http://localhost:8000](http://localhost:8000)
 
 ### Core Workflows
 
 1. **Process Invoices**
-  - Upload at `/upload`
-  - View at `/invoices`
-  - Review at `/review`
-  - Monitor at `/metrics`
+   - Upload at `/upload`
+   - View at `/invoices`
+   - Review at `/review`
+   - Monitor at `/metrics`
 
 2. **System Features**
-  - Automatic duplicate detection
-  - Confidence scoring (≥0.9 auto-process, <0.9 review)
-  - Asynchronous processing
-  - Comprehensive logging
+   - Automatic duplicate detection
+   - Confidence scoring (≥0.9 auto-process, <0.9 review)
+   - Asynchronous processing
+   - Comprehensive logging
 
 ### Dependencies
 
 #### Frontend
+
 - Next.js ^14.2.24
 - React ^18.2.0
 - React Hook Form ^7.50.1
@@ -415,15 +425,17 @@ clear_ledger_nextjs/
 - TypeScript ^5.3.3
 
 #### Backend
+
 - FastAPI
 - LangChain
 - OpenAI
 - PDFPlumber
 - Pytesseract
 
-## 📈 Project Progress
+## Project Progress
 
 ### Completed (Days 1-6)
+
 - ✅ Multi-agent system implementation
 - ✅ Frontend migration (Streamlit → Next.js)
 - ✅ OpenAI API integration
@@ -432,17 +444,19 @@ clear_ledger_nextjs/
 - ✅ Day 6: Project Refinement and Optimization
 
 ### Remaining Tasks (Days 7-8)
+
 - 📋 Day 7: Dockerize, CI/CD, and Documentation & Testing
 - 📋 Day 8: Performance Optimization & Submission
 
 ### Recent Enhancements
+
 - 🆕 Form validation (react-hook-form + yup)
 - 🆕 Toast notifications (react-hot-toast)
 - 🆕 PDF preview system (react-pdf)
 - 🆕 Enhanced error handling and WebSocket stability
 - 🆕 Removed unused SVGs and confirmed anomalies page integration
 
-## 🔍 Troubleshooting Guide
+## Troubleshooting Guide
 
 ### Common Issues and Solutions
 
@@ -483,8 +497,4 @@ clear_ledger_nextjs/
 
 ---
 
-<div align="center">
-
 **Built with ❤️ for the Technical Challenge**
-
-</div>
