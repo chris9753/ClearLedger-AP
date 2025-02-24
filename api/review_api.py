@@ -1,8 +1,11 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import json
 from dotenv import load_dotenv
-import os
 
 # Load environment variables
 load_dotenv()
