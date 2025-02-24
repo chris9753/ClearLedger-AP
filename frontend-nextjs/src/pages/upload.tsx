@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { uploadInvoice } from "../../lib/api";  // Updated import path
 import { toast } from 'react-hot-toast'; // Added import for toast notifications
 
@@ -16,7 +16,7 @@ interface UploadResponse {
 
 export default function UploadPage() {
   const [files, setFiles] = useState<FileList | null>(null);
-  const [response, setResponse] = useState<UploadResponse | null>(null);
+  const [uploadResponse, setUploadResponse] = useState<UploadResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [isProcessingAll, setIsProcessingAll] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<{
@@ -26,8 +26,6 @@ export default function UploadPage() {
     currentFile?: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [socket, setSocket] = useState<WebSocket | null>(null);
-  const [wsConnected, setWsConnected] = useState(false);
   const [wsState, setWsState] = useState<{
     connected: boolean;
     reconnectAttempt: number;
@@ -37,6 +35,7 @@ export default function UploadPage() {
     reconnectAttempt: 0,
     lastError: null
   });
+  const progressBarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isProcessingAll) return;
@@ -130,6 +129,13 @@ export default function UploadPage() {
     };
   }, [isProcessingAll, wsState.reconnectAttempt]);
 
+  useEffect(() => {
+    if (processingStatus && progressBarRef.current) {
+      const percent = (processingStatus.current / processingStatus.total) * 100;
+      progressBarRef.current.style.setProperty('--progress-width', `${percent}%`);
+    }
+  }, [processingStatus]);
+
   const handleProcessAll = async () => {
     setIsProcessingAll(true);
     try {
@@ -157,9 +163,9 @@ export default function UploadPage() {
     setError(null);
     console.log("Uploading file:", files[0].name);
     try {
-      const data = await uploadInvoice(files[0]);
+      const data = await uploadInvoice(files[0]) as UploadResponse;
       console.log("API response:", JSON.stringify(data, null, 2));
-      setResponse(data);
+      setUploadResponse(data);
       toast.success('Invoice uploaded successfully');
       console.log("Updated response state:", JSON.stringify(data, null, 2));
     } catch (err) {
@@ -186,11 +192,15 @@ export default function UploadPage() {
     <div className="max-w-2xl mx-auto py-6">
       <h1 className="text-2xl font-bold mb-6">Upload Invoice</h1>
       
-      {/* File upload form */}
+      {/* File upload form with accessible label */}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="flex items-center space-x-4">
+          <label htmlFor="invoice-file" className="sr-only">Select Invoice PDF</label>
           <input
+            id="invoice-file"
             type="file"
+            aria-label="Select Invoice PDF"
+            placeholder="Select Invoice PDF"
             accept=".pdf"
             multiple={false}
             onChange={(e) => setFiles(e.target.files)}
@@ -227,10 +237,8 @@ export default function UploadPage() {
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2.5">
                 <div 
-                  className="bg-green-600 h-2.5 rounded-full transition-all duration-500"
-                  style={{ 
-                    width: `${(processingStatus.current / processingStatus.total) * 100}%`
-                  }}
+                  ref={progressBarRef}
+                  className="progress-bar bg-green-600 h-2.5 rounded-full transition-all duration-500"
                 ></div>
               </div>
               {processingStatus.currentFile && (
@@ -251,14 +259,14 @@ export default function UploadPage() {
       {error && <p className="text-red-500 mt-4">{error}</p>}
       
       {/* Single upload response display */}
-      {response && (
+      {uploadResponse && (
         <div className="bg-gray-100 p-4 rounded mt-4 space-y-2">
-          <p><span className="font-semibold">Vendor:</span> {response.extracted_data.vendor_name}</p>
-          <p><span className="font-semibold">Invoice Number:</span> {response.extracted_data.invoice_number}</p>
-          <p><span className="font-semibold">Date:</span> {response.extracted_data.invoice_date}</p>
-          <p><span className="font-semibold">Total Amount:</span> £{response.extracted_data.total_amount}</p>
-          <p><span className="font-semibold">Confidence:</span> {(response.extracted_data.confidence * 100).toFixed(2)}%</p>
-          <p><span className="font-semibold">Status:</span> {response.extracted_data.validation_status}</p>
+          <p><span className="font-semibold">Vendor:</span> {uploadResponse.extracted_data.vendor_name}</p>
+          <p><span className="font-semibold">Invoice Number:</span> {uploadResponse.extracted_data.invoice_number}</p>
+          <p><span className="font-semibold">Date:</span> {uploadResponse.extracted_data.invoice_date}</p>
+          <p><span className="font-semibold">Total Amount:</span> £{uploadResponse.extracted_data.total_amount}</p>
+          <p><span className="font-semibold">Confidence:</span> {(uploadResponse.extracted_data.confidence * 100).toFixed(2)}%</p>
+          <p><span className="font-semibold">Status:</span> {uploadResponse.extracted_data.validation_status}</p>
         </div>
       )}
 
