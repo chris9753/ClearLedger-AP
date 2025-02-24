@@ -1,4 +1,4 @@
-export async function uploadInvoice(file: File): Promise<any> {
+export async function uploadInvoice(file: File): Promise<unknown> {
     const formData = new FormData();
     formData.append('file', file);
     
@@ -10,7 +10,7 @@ export async function uploadInvoice(file: File): Promise<any> {
     if (!response.ok) {
         const contentType = response.headers.get('Content-Type');
         if (contentType && contentType.includes('application/json')) {
-            const errorData = await response.json();
+            const errorData: unknown = await response.json();
             throw new Error(JSON.stringify(errorData));
         } else {
             const text = await response.text();
@@ -21,7 +21,7 @@ export async function uploadInvoice(file: File): Promise<any> {
     return response.json();
 }
 
-export async function getInvoices(): Promise<any> {
+export async function getInvoices(): Promise<unknown> {
     const response = await fetch(`${process.env.NEXT_PUBLIC_MAIN_API_URL}/api/invoices`, {
         method: 'GET'
     });
@@ -39,7 +39,7 @@ export async function getInvoicePdf(invoiceId: string): Promise<Blob> {
         
         const contentType = response.headers.get('Content-Type');
         if (contentType && contentType.includes('application/json')) {
-            const errorData = await response.json();
+            const errorData: { detail?: string } = await response.json();
             throw new Error(errorData.detail || 'Failed to retrieve PDF');
         }
         
@@ -49,7 +49,7 @@ export async function getInvoicePdf(invoiceId: string): Promise<Blob> {
     return response.blob();
 }
 
-export async function getAnomalies(): Promise<any> {
+export async function getAnomalies(): Promise<unknown> {
     const response = await fetch(`${process.env.NEXT_PUBLIC_MAIN_API_URL}/api/anomalies`);
     if (!response.ok) throw new Error('Failed to fetch anomalies');
     return response.json();
