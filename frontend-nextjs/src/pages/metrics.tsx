@@ -1,32 +1,52 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getInvoices } from '../../lib/api';
-import { Invoice } from '../types';  // Import Invoice from types.ts
+import { Invoice } from '../types';
 import { toast } from 'react-hot-toast';
 
+interface Metrics {
+  total: number;
+  valid: number;
+  avg_time: number;
+  high_confidence_pct: number;
+}
+
 export default function MetricsPage() {
-  const [metrics, setMetrics] = useState<{
-    total: number;
-    valid: number;
-    avg_time: number;
-    high_confidence_pct: number;
-  } | null>(null);
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY = 2000;
+  const TIMEOUT_DURATION = 10000;
 
-  const fetchMetrics = async () => {
+  const fetchMetricsWithTimeout = async (): Promise<Invoice[]> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_DURATION);
+
+    try {
+      const response = await getInvoices();
+      clearTimeout(timeoutId);
+      // Type assertion since we know the API returns Invoice[]
+      return response as Invoice[];
+    } catch (error: unknown) {
+      clearTimeout(timeoutId);
+      throw error;
+    }
+  };
+
+  const fetchMetrics = useCallback(async () => {
     setLoading(true);
     setError(null);
+
     try {
-      const invoices = await getInvoices() as Invoice[];
+      const invoices = await fetchMetricsWithTimeout();
       const total = invoices.length;
-      const valid = invoices.filter((invoice: Invoice) => invoice.validation_status === 'valid').length;
+      const valid = invoices.filter(invoice => invoice.validation_status === 'valid').length;
       
-      // Calculate average processing time using total_time
-      const avgTime = invoices.reduce((sum: number, invoice: Invoice) => 
+      const avgTime = invoices.reduce((sum, invoice) => 
         sum + (invoice.total_time || 0), 0) / total;
       
-      // Calculate high confidence percentage (confidence > 0.8 is considered high)
-      const highConfidenceCount = invoices.filter((invoice: Invoice) => 
+      const highConfidenceCount = invoices.filter(invoice => 
         invoice.confidence > 0.8).length;
       const highConfidencePct = (highConfidenceCount / total) * 100;
 
@@ -36,17 +56,30 @@ export default function MetricsPage() {
         avg_time: Number(avgTime.toFixed(2)),
         high_confidence_pct: Number(highConfidencePct.toFixed(1))
       });
-    } catch (err) {
-      setError('Failed to load metrics. Please try again.');
-      toast.error('Failed to load metrics: ' + (err instanceof Error ? err.message : ''));
+      setRetryCount(0);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setError(`Failed to load metrics: ${errorMessage}. Retrying...`);
+      if (retryCount < MAX_RETRIES) {
+        setTimeout(() => {
+          setRetryCount(prev => prev + 1);
+          fetchMetrics();
+        }, RETRY_DELAY);
+        toast.error(`Attempt ${retryCount + 1}/${MAX_RETRIES}: ${errorMessage}`);
+      } else {
+        setError(`Failed to load metrics: ${errorMessage}`);
+        toast.error('Failed to load metrics after multiple attempts. Please refresh the page.');
+      }
     } finally {
-      setLoading(false);
+      if (retryCount >= MAX_RETRIES) {
+        setLoading(false);
+      }
     }
-  };
+  }, [retryCount, MAX_RETRIES, RETRY_DELAY]);
 
   useEffect(() => {
     fetchMetrics();
-  }, []);
+  }, [fetchMetrics]);
 
   return (
     <div className="max-w-7xl mx-auto py-6">
