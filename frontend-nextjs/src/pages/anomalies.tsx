@@ -10,6 +10,7 @@ interface Anomaly {
   invoice_number?: string;
   vendor_name?: string;
   confidence?: number;
+  type: 'invalid_pdf' | 'extraction_error' | 'missing_data' | 'low_confidence' | 'processing_error' | 'system_error';
 }
 
 export default function AnomaliesPage() {
@@ -22,10 +23,18 @@ export default function AnomaliesPage() {
     setError(null);
     try {
       const data = await getAnomalies();
-      setAnomalies(data as Anomaly[]);
+      if (!Array.isArray(data)) {
+        throw new Error('Invalid response format from server');
+      }
+      // Sort anomalies by timestamp in descending order
+      const sortedAnomalies = [...data].sort((a, b) => 
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+      setAnomalies(sortedAnomalies);
     } catch (err) {
-      setError('Failed to load anomalies');
-      toast.error('Failed to load anomalies: ' + (err instanceof Error ? err.message : ''));
+      const message = err instanceof Error ? err.message : 'Failed to load anomalies';
+      setError(message);
+      toast.error('Failed to load anomalies: ' + message);
     } finally {
       setLoading(false);
     }
@@ -34,6 +43,18 @@ export default function AnomaliesPage() {
   useEffect(() => {
     fetchAnomalies();
   }, []);
+
+  const getAnomalyTypeColor = (type: Anomaly['type']) => {
+    const colors = {
+      'invalid_pdf': 'bg-red-100 text-red-800',
+      'extraction_error': 'bg-orange-100 text-orange-800',
+      'missing_data': 'bg-yellow-100 text-yellow-800',
+      'low_confidence': 'bg-blue-100 text-blue-800',
+      'processing_error': 'bg-purple-100 text-purple-800',
+      'system_error': 'bg-gray-100 text-gray-800'
+    };
+    return colors[type] || 'bg-gray-100 text-gray-800';
+  };
 
   return (
     <div className="max-w-7xl mx-auto py-6">
@@ -50,13 +71,30 @@ export default function AnomaliesPage() {
 
       {error && <p className="text-red-500 mb-4">{error}</p>}
 
-      {anomalies.length > 0 ? (
+      {loading && (
+        <div className="flex justify-center py-8">
+          <p className="text-gray-500">Loading anomalies...</p>
+        </div>
+      )}
+
+      {!loading && anomalies.length === 0 && (
+        <div className="bg-white p-6 rounded-lg shadow text-center">
+          <p className="text-gray-500">No anomalies found.</p>
+        </div>
+      )}
+
+      {anomalies.length > 0 && (
         <div className="space-y-4">
           {anomalies.map((anomaly, idx) => (
             <div key={idx} className="bg-white p-4 rounded-lg shadow">
               <div className="flex items-start justify-between">
-                <div className="space-y-2">
-                  <p className="font-medium text-red-600">File: {anomaly.file_name}</p>
+                <div className="space-y-2 flex-grow">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium text-red-600">File: {anomaly.file_name}</p>
+                    <span className={`px-3 py-1 rounded-full text-xs ${getAnomalyTypeColor(anomaly.type)}`}>
+                      {anomaly.type.replace('_', ' ')}
+                    </span>
+                  </div>
                   <p className="text-sm text-gray-600">Reason: {anomaly.reason}</p>
                   {anomaly.invoice_number && (
                     <p className="text-sm text-gray-600">Invoice Number: {anomaly.invoice_number}</p>
@@ -65,25 +103,27 @@ export default function AnomaliesPage() {
                     <p className="text-sm text-gray-600">Vendor: {anomaly.vendor_name}</p>
                   )}
                   {anomaly.confidence !== undefined && (
-                    <p className="text-sm text-gray-600">Confidence: {(anomaly.confidence * 100).toFixed(1)}%</p>
+                    <p className="text-sm text-gray-600">
+                      Confidence: {(anomaly.confidence * 100).toFixed(1)}%
+                    </p>
                   )}
-                  <p className="text-sm text-gray-500">
-                    Detected: {new Date(anomaly.timestamp).toLocaleString()}
-                  </p>
+                  <div className="flex justify-between items-center text-sm text-gray-500">
+                    <span>
+                      Detected: {new Date(anomaly.timestamp).toLocaleString()}
+                    </span>
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      anomaly.review_status === 'needs_review' 
+                        ? 'bg-yellow-100 text-yellow-800' 
+                        : 'bg-green-100 text-green-800'
+                    }`}>
+                      {anomaly.review_status}
+                    </span>
+                  </div>
                 </div>
-                <span className={`px-2 py-1 rounded-full text-xs ${
-                  anomaly.review_status === 'needs_review' 
-                    ? 'bg-yellow-100 text-yellow-800' 
-                    : 'bg-green-100 text-green-800'
-                }`}>
-                  {anomaly.review_status}
-                </span>
               </div>
             </div>
           ))}
         </div>
-      ) : (
-        <p className="text-gray-500 text-center py-8">No anomalies found.</p>
       )}
     </div>
   );
