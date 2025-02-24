@@ -234,15 +234,47 @@ def save_invoice(invoice_data: dict):
         raise HTTPException(status_code=500, detail=f"Error saving invoice: {str(e)}")
 
 
-def validate_pdf_content(content: bytes) -> bool:
-    """Validate that content is a proper PDF file"""
+def validate_pdf_content(content: bytes) -> tuple[bool, str]:
+    """Validate that content is a proper PDF file. Returns (is_valid, error_message)"""
     # Check PDF magic number
     if not content.startswith(b'%PDF-'):
-        return False
+        return False, "File does not start with PDF header"
     # Check for PDF end marker
     if not any(marker in content[-1024:] for marker in [b'%%EOF', b'%%EOF\n', b'%%EOF\r\n']):
-        return False
-    return True
+        return False, "File is missing PDF end marker"
+    return True, ""
+
+def save_anomaly(anomaly_data: dict):
+    """Save anomaly data to the anomalies.json file with timestamp"""
+    try:
+        os.makedirs(StorageConfig.PROCESSED_DIR, exist_ok=True)
+        try:
+            with StorageConfig.ANOMALIES_FILE.open('r') as f:
+                anomalies = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            anomalies = []
+            
+        # Add timestamp and ensure review_status exists
+        anomaly_data.update({
+            "timestamp": datetime.utcnow().isoformat(),
+            "review_status": anomaly_data.get("review_status", "needs_review")
+        })
+            
+        # Check for existing anomaly and update it
+        for idx, anomaly in enumerate(anomalies):
+            if anomaly.get('file_name') == anomaly_data.get('file_name'):
+                anomalies[idx] = anomaly_data
+                break
+        else:
+            # No existing anomaly found, append new one
+            anomalies.append(anomaly_data)
+            
+        with StorageConfig.ANOMALIES_FILE.open('w') as f:
+            json.dump(anomalies, f, indent=4)
+        logger.info(f"Saved anomaly: {anomaly_data.get('file_name')}")
+    except Exception as e:
+        logger.error(f"Error saving anomaly: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error saving anomaly: {str(e)}")
 
 @app.post("/api/upload_invoice")
 async def upload_invoice(file: UploadFile = File(...)):
@@ -252,22 +284,26 @@ async def upload_invoice(file: UploadFile = File(...)):
             status_code=400,
             detail="No file provided"
         )
-        
-    if not file.filename.lower().endswith('.pdf'):
-        return {
-            "status": "error",
-            "detail": "Only PDF files are allowed",
-            "type": "validation_error"
-        }
 
     temp_path = StorageConfig.get_temp_path()
     try:
         content = await file.read()
         
-        if not validate_pdf_content(content):
+        # Validate PDF content
+        is_valid_pdf, error_message = validate_pdf_content(content)
+        if not is_valid_pdf:
+            # Save as anomaly when PDF is invalid
+            anomaly_data = {
+                "file_name": file.filename,
+                "reason": f"Invalid PDF format: {error_message}",
+                "confidence": 0.0,
+                "review_status": "needs_review",
+                "type": "invalid_pdf"
+            }
+            save_anomaly(anomaly_data)
             return {
                 "status": "error",
-                "detail": "Invalid or corrupted PDF file",
+                "detail": f"Invalid PDF file: {error_message}",
                 "type": "validation_error"
             }
             
@@ -277,24 +313,56 @@ async def upload_invoice(file: UploadFile = File(...)):
         try:
             result = await workflow.process_invoice(str(temp_path))
             extracted_data = result.get('extracted_data')
+            
+            # Check for extraction failure
             if not extracted_data:
+                anomaly_data = {
+                    "file_name": file.filename,
+                    "reason": "Failed to extract any data from file",
+                    "confidence": 0.0,
+                    "review_status": "needs_review",
+                    "type": "extraction_error"
+                }
+                save_anomaly(anomaly_data)
                 return {
                     "status": "error",
                     "detail": "Could not extract any data from the file",
                     "type": "extraction_error"
                 }
             
+            # Check for missing invoice number
             if not extracted_data.get('invoice_number'):
+                anomaly_data = {
+                    "file_name": file.filename,
+                    "reason": "No invoice number found",
+                    "confidence": extracted_data.get('confidence', 0.0),
+                    "review_status": "needs_review",
+                    "type": "missing_data"
+                }
+                save_anomaly(anomaly_data)
                 return {
                     "status": "error",
                     "detail": "Could not find invoice number in the document",
                     "type": "extraction_error"
                 }
             
-            # Save PDF using the new helper function instead of copying
+            # Save PDF using the helper function
             invoice_id = extracted_data['invoice_number']
             process_invoice_and_save(content, invoice_id)
-            logger.info(f"Saved PDF for invoice {invoice_id} to {StorageConfig.get_pdf_path(invoice_id)}")
+            logger.info(f"Saved PDF for invoice {invoice_id}")
+            
+            # Check confidence level for potential anomaly
+            if extracted_data.get('confidence', 0) < 0.7:
+                anomaly_data = {
+                    "file_name": file.filename,
+                    "invoice_number": invoice_id,
+                    "vendor_name": extracted_data.get('vendor_name'),
+                    "reason": "Low confidence extraction",
+                    "confidence": extracted_data['confidence'],
+                    "review_status": "needs_review",
+                    "type": "low_confidence"
+                }
+                save_anomaly(anomaly_data)
             
             save_invoice(result['extracted_data'])
             
@@ -306,6 +374,15 @@ async def upload_invoice(file: UploadFile = File(...)):
             
         except Exception as process_error:
             logger.error(f"Error processing invoice {file.filename}: {str(process_error)}")
+            # Save processing errors as anomalies
+            anomaly_data = {
+                "file_name": file.filename,
+                "reason": f"Processing error: {str(process_error)}",
+                "confidence": 0.0,
+                "review_status": "needs_review",
+                "type": "processing_error"
+            }
+            save_anomaly(anomaly_data)
             return {
                 "status": "error",
                 "detail": f"Failed to process invoice: {str(process_error)}",
@@ -313,6 +390,15 @@ async def upload_invoice(file: UploadFile = File(...)):
             }
     except Exception as e:
         logger.error(f"Unexpected error processing {file.filename}: {str(e)}")
+        # Save unexpected errors as anomalies
+        anomaly_data = {
+            "file_name": file.filename,
+            "reason": f"System error: {str(e)}",
+            "confidence": 0.0,
+            "review_status": "needs_review",
+            "type": "system_error"
+        }
+        save_anomaly(anomaly_data)
         return {
             "status": "error",
             "detail": f"Error processing file: {str(e)}",
@@ -429,31 +515,6 @@ async def get_anomalies():
     except Exception as e:
         logger.error(f"Error reading anomalies: {str(e)}")
         return []
-
-def save_anomaly(anomaly_data: dict):
-    """Save anomaly data to the anomalies.json file"""
-    try:
-        os.makedirs(StorageConfig.PROCESSED_DIR, exist_ok=True)
-        try:
-            with StorageConfig.ANOMALIES_FILE.open('r') as f:
-                anomalies = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            anomalies = []
-            
-        # Check for existing anomaly and update it
-        for idx, anomaly in enumerate(anomalies):
-            if anomaly.get('file_name') == anomaly_data.get('file_name'):
-                anomalies[idx] = anomaly_data
-                break
-        else:
-            # No existing anomaly found, append new one
-            anomalies.append(anomaly_data)
-            
-        with StorageConfig.ANOMALIES_FILE.open('w') as f:
-            json.dump(anomalies, f, indent=4)
-    except Exception as e:
-        logger.error(f"Error saving anomaly: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error saving anomaly: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
