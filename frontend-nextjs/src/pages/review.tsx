@@ -20,6 +20,8 @@ interface Invoice {
   total_amount: number;
   validation_status: string;
   invoice_date: string;
+  review_status?: string;
+  confidence?: number;
 }
 
 // Update FormInputs type to use string for invoice_date
@@ -87,7 +89,12 @@ export default function ReviewPage() {
       const response = await fetch('http://localhost:8000/api/invoices');
       if (!response.ok) throw new Error('Failed to fetch invoices');
       const data = await response.json();
-      setInvoices(data);
+      // Filter to only show invoices that need review
+      const reviewInvoices = data.filter((invoice: Invoice) => 
+        invoice.review_status === "needs_review" || 
+        invoice.validation_status === "failed"
+      );
+      setInvoices(reviewInvoices);
     } catch (err) {
       console.error('Error fetching invoices:', err);
       setError('Failed to load invoices. Please try again.');
@@ -138,6 +145,15 @@ export default function ReviewPage() {
     <div className="max-w-7xl mx-auto py-6">
       <h1 className="text-2xl font-bold mb-6">Review Invoices</h1>
       {error && <p className="text-red-500 mb-4">{error}</p>}
+      
+      {loading && (
+        <p className="text-gray-500 text-center py-4">Loading invoices for review...</p>
+      )}
+      
+      {!loading && invoices.length === 0 && (
+        <p className="text-gray-500 text-center py-8">No invoices require review at this time.</p>
+      )}
+      
       {selectedInvoice ? (
         // Begin form with react-hook-form
         <FormSection selectedInvoice={selectedInvoice} onSubmit={onSubmit} setSelectedInvoice={setSelectedInvoice} loading={loading} />
@@ -148,7 +164,11 @@ export default function ReviewPage() {
               <div className="flex justify-between items-center">
                 <div>
                   <p className="font-medium">Invoice: {invoice.invoice_number}</p>
+                  <p className="text-sm text-gray-600">Vendor: {invoice.vendor_name}</p>
                   <p className="text-sm text-gray-600">Amount: {invoice.total_amount}</p>
+                  <p className="text-sm text-gray-600">
+                    Confidence: {typeof invoice.confidence === 'number' ? (invoice.confidence * 100).toFixed(1) : 'N/A'}%
+                  </p>
                   <p className="text-sm text-gray-600">Status: {invoice.validation_status || 'Unknown'}</p>
                   <button
                     onClick={() => handleViewPdf(invoice.invoice_number)}
