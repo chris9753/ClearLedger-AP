@@ -122,6 +122,15 @@ This repository houses the Next.js frontend version of the Clear Ledger AP, buil
      - Issue: Multiple submission issues
      - Solution: Implemented proper loading states and safeguards
 
+### Day 6: Project Refinement and Optimization
+- **Objectives Achieved**: Streamlined project structure, removed redundant files, and optimized integration for production deployment.
+- **Technical Fixes**:
+  - Merged `api/human_review_api.py` into `api/review_api.py`, consolidating review functionality into a single API module running on port 8000, eliminating redundancy.
+  - Removed `workflows/pipeline.py` as its functionality is fully covered by `workflows/orchestrator.py`, ensuring a single, robust workflow manager.
+  - Reviewed `frontend-nextjs/public/` directory and removed unnecessary SVG files (e.g., `file.svg`, `globe.svg`) not referenced in the application, reducing build size.
+  - Verified `frontend-nextjs/src/pages/anomalies.tsx` integration, confirming it’s linked to the backend via `lib/api.ts` for anomaly retrieval, and kept as a functional page.
+  - Ensured `lib/api.ts` only handles API client logic without duplicating backend processing, maintaining clear separation of concerns.
+
 ## 🏗️ Architecture
 
 ### Project Structure
@@ -147,8 +156,7 @@ clear_ledger_nextjs/
 ├── api/
 │   ├── __init__.py
 │   ├── app.py
-│   ├── human_review_api.py
-│   ├── review_api.py
+│   ├── review_api.py  <!-- consolidated review functionality -->
 │   └── __pycache__/
 │       └── … (compiled files)
 ├── config/
@@ -191,20 +199,22 @@ clear_ledger_nextjs/
 │   ├── lib/
 │   │   └── api.ts
 │   ├── public/
-│   │   └── … (static assets)
+│   │   └── next.svg
+│   │   └── vercel.svg
+│   │   └── window.svg
 │   └── src/
-│       │   ├── pages/
-│       │   │   ├── _app.tsx
-│       │   │   └── anomalies.tsx
-│       │   │   ├── index.tsx
-│       │   │   └── invoices.tsx
-│       │   │   ├── metrics.tsx
-│       │   │   └── review.tsx
-│       │   │   ├── upload.tsx
-│       │   ├── components/
-│       │   │   ├── Layout.tsx
-│       │   └── styles/
-│       │       └── globals.css
+│       ├── pages/
+│       │   ├── _app.tsx
+│       │   ├── anomalies.tsx  <!-- functional page for anomaly review -->
+│       │   ├── index.tsx
+│       │   ├── invoices.tsx
+│       │   ├── metrics.tsx
+│       │   └── review.tsx
+│       │   └── upload.tsx
+│       ├── components/
+│       │   └── Layout.tsx
+│       └── styles/
+│           └── globals.css
 ├── models/
 │   ├── __init__.py
 │   ├── invoice.py
@@ -221,8 +231,7 @@ clear_ledger_nextjs/
 │   └── test_workflows.py
 └── workflows/
     ├── __init__.py
-    ├── orchestrator.py
-    ├── pipeline.py
+    ├── orchestrator.py  <!-- sole workflow manager -->
     └── __pycache__/
         └── … (compiled files)
 ```
@@ -336,13 +345,10 @@ clear_ledger_nextjs/
 
 ### Starting Services
 
-1. **Backend APIs**
+1. **Backend API**
    ```bash
-   # Terminal 1: Main API
-   python -m uvicorn api.app:app --reload --port 8000
-
-   # Terminal 2: Review API
-   python -m uvicorn api.human_review_api:app --reload --port 8001
+   # Terminal 1: Main API (includes review functionality)
+   python -m uvicorn api.review_api:app --reload --port 8000
    ```
 
 2. **Frontend Application**
@@ -356,7 +362,6 @@ clear_ledger_nextjs/
 - **Main Application**: http://localhost:3000
 - **API Endpoints**:
   - Main API: http://localhost:8000
-  - Review API: http://localhost:8001
 
 ### Core Workflows
 
@@ -386,15 +391,15 @@ clear_ledger_nextjs/
 
 ## 📈 Project Progress
 
-### Completed (Days 1-5)
+### Completed (Days 1-6)
 - ✅ Multi-agent system implementation
 - ✅ Frontend migration (Streamlit → Next.js)
 - ✅ OpenAI API integration
 - ✅ RAG-based error handling
 - ✅ Critical system improvements
+- ✅ Day 6: Project Refinement and Optimization
 
-### Remaining Tasks (Days 6-8)
-- 📋 Day 6: Containerization & CI/CD
+### Remaining Tasks (Days 7-8)
 - 📋 Day 7: Documentation & Testing
 - 📋 Day 8: Performance Optimization & Submission
 
@@ -402,8 +407,8 @@ clear_ledger_nextjs/
 - 🆕 Form validation (react-hook-form + yup)
 - 🆕 Toast notifications (react-hot-toast)
 - 🆕 PDF preview system (react-pdf)
-- 🆕 Enhanced error handling
-- 🆕 WebSocket stability improvements
+- 🆕 Enhanced error handling and WebSocket stability
+- 🆕 Removed unused SVGs and confirmed anomalies page integration
 
 ---
 
