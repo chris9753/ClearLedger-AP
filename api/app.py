@@ -393,11 +393,11 @@ def save_anomaly(anomaly_data: dict):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        "api.app:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        ws='auto',  # Enable WebSocket support
-        ws_ping_interval=20.0,  # Keep connections alive
-        ws_ping_timeout=20.0
+         "api.app:app",
+         host="0.0.0.0",
+         port=8000,
+         reload=True,
+         ws='auto',  # Enable WebSocket support
+         ws_ping_interval=20.0,
+         ws_ping_timeout=20.0
     )
