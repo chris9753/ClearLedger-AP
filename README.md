@@ -337,64 +337,66 @@ clear_ledger_nextjs/
 
 1. **Clone Repository**
 
+### Setup Guide (Dockerized)
+
+1. **Clone the repository**:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/yourusername/clear_ledger_nextjs.git
    cd clear_ledger_nextjs
-   ```
 
-2. **Create Environment File**
-
+2. **Build & Run with Docker**
    ```bash
    # Create .env file in root directory
    echo "OPENAI_API_KEY=your_api_key_here" > .env
+
+   # Build and run with Docker Compose
+   docker compose up --build -d
    ```
 
-3. **Setup Node.js**
+3. **Access the Application**
+   - Frontend: http://localhost:3000
+   - Backend: http://localhost:8000/docs
 
+4. **Using Pre-built Images** (Optional)
    ```bash
-   nvm install 20
-   nvm use 20
+   # Pull images from Docker Hub
+   docker pull chris9753/clear_ledger_nextjs_backend:latest
+   docker pull chris9753/clear_ledger_nextjs_frontend:latest
    ```
+   ### Using Pre-built Images
 
-4. **Python Environment Setup**
+   1. **Create a docker-compose.yml**:
+      ```yaml
+      version: '3.8'
+      services:
+        backend:
+          image: chris9753/clear_ledger_nextjs_backend:latest
+          ports:
+            - "8000:8000"
+          environment:
+            - OPENAI_API_KEY=${OPENAI_API_KEY}
+          volumes:
+            - ./data:/app/data
 
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # Linux/Mac
-   # OR
-   venv\Scripts\activate     # Windows
-   pip install -r requirements.txt
-   sudo apt-get install libblas-dev liblapack-dev
-   ```
+        frontend:
+          image: chris9753/clear_ledger_nextjs_frontend:latest
+          ports:
+            - "3000:3000"
+          depends_on:
+            - backend
+      ```
 
-5. **Frontend Installation**
+   ### CI/CD Pipeline
 
-   ```bash
-   cd frontend-nextjs
-   npm install
-   ```
+   This project uses GitHub Actions to automatically build and push Docker images to Docker Hub whenever changes are pushed to the repository.
 
-6. **Start Services**
+   Pre-built images are available at:
+   - Backend: `chris9753/clear_ledger_nextjs_backend:latest`
+   - Frontend: `chris9753/clear_ledger_nextjs_frontend:latest`
 
-   ```bash
-   # Terminal 1: Backend API
-   python -m uvicorn api.app:app --reload --port 8000
+   ### Core Workflows
 
-   # Terminal 2: Frontend
-   cd frontend-nextjs
-   npm run dev
-   ```
-
-> **Important Note**: If batch processing stalls, ensure a stable server connection and consider increasing WebSocket timeout settings (`ws_ping_interval`, `ws_ping_timeout`) in `api/app.py`.
-
-### System Access
-
-- Frontend: [http://localhost:3000](http://localhost:3000)
-- API: [http://localhost:8000](http://localhost:8000)
-
-### Core Workflows
-
-1. **Process Invoices**
+   1. **Process Invoices**
    - Upload at `/upload`
    - View at `/invoices`
    - Review at `/review`
@@ -435,10 +437,9 @@ clear_ledger_nextjs/
 - ✅ Critical system improvements
 - ✅ Project Refinement and Optimization
 
-### Remaining Tasks (Days 7-8)
-
-- 📋 Day 7: Dockerize, CI/CD, and Documentation & Testing
-- 📋 Day 8: Performance Optimization & Submission
+### Remaining Tasks (Days 7-10)
+- Day 7: Documentation & Testing
+- Day 8: Performance Optimization & Submission
 
 ## Future Enhancement: Database-Backed Invoice Management
 
