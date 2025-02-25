@@ -161,6 +161,11 @@ async def process_all_invoices():
                     logger.error(f"Failed to process {pdf_path.name}: {result.get('message')}")
                 else:
                     processed += 1
+                    extracted_data = result.get('extracted_data', {})
+                    # Add original path and filename to extracted data
+                    extracted_data['original_path'] = str(pdf_path)
+                    extracted_data['file_name'] = pdf_path.name
+                    save_invoice(extracted_data)
                     logger.info(f"Successfully processed {pdf_path.name}")
 
             except Exception as e:
@@ -318,7 +323,8 @@ async def upload_invoice(file: UploadFile = File(...)):
             process_invoice_and_save(content, invoice_id)
             logger.info(f"Saved PDF for invoice {invoice_id}")
             
-            # Add original filename to extracted data
+            # Add original path and filename to extracted data
+            extracted_data['original_path'] = str(temp_path)
             extracted_data['file_name'] = file.filename
             
             if extracted_data.get('confidence', 0) < 0.7:
