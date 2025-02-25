@@ -15,11 +15,11 @@ jobs:
     - name: Free Disk Space
       run: |
         echo "Freeing up disk space..."
-        df -h
+        df -h  # Show disk usage before cleanup
         sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
         sudo apt-get clean
-        docker system prune -af
-        df -h
+        docker system prune -af  # Remove unused Docker objects
+        df -h  # Show disk usage after cleanup
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
