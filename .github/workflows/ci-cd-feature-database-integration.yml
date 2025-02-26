@@ -1,0 +1,38 @@
+name: CI/CD for Feature Database Integration Branch
+
+on:
+  push:
+    branches:
+      - feature/database-integration
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: true
+          tags: chris9753/clear_ledger_nextjs_backend:feature-database-integration
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./frontend-nextjs
+          file: ./frontend-nextjs/Dockerfile
+          push: true
+          tags: chris9753/clear_ledger_nextjs_frontend:feature-database-integration
