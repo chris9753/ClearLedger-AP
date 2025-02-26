@@ -30,16 +30,39 @@ app = FastAPI()
 class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
+        self.heartbeat_interval = 15  # seconds
+        self._heartbeat_tasks = {}
 
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
         self.active_connections.append(websocket)
+        self._heartbeat_tasks[websocket] = asyncio.create_task(self._heartbeat(websocket))
+        logger.info("WebSocket client connected")
 
     def disconnect(self, websocket: WebSocket):
-        if (websocket in self.active_connections):
+        if websocket in self.active_connections:
             self.active_connections.remove(websocket)
+            if websocket in self._heartbeat_tasks:
+                self._heartbeat_tasks[websocket].cancel()
+                del self._heartbeat_tasks[websocket]
+            logger.info("WebSocket client disconnected")
+
+    async def _heartbeat(self, websocket: WebSocket):
+        """Send periodic heartbeat to keep connection alive."""
+        try:
+            while True:
+                await asyncio.sleep(self.heartbeat_interval)
+                try:
+                    await websocket.send_json({"type": "heartbeat"})
+                except Exception as e:
+                    logger.error(f"Heartbeat failed: {str(e)}")
+                    self.disconnect(websocket)
+                    break
+        except asyncio.CancelledError:
+            pass
 
     async def broadcast(self, message: dict):
+        """Broadcast a message to all connected clients."""
         disconnected = []
         for connection in self.active_connections:
             try:
@@ -49,6 +72,7 @@ class ConnectionManager:
             except Exception as e:
                 logger.error(f"Error sending WebSocket message: {str(e)}")
                 disconnected.append(connection)
+        
         for connection in disconnected:
             self.disconnect(connection)
 
@@ -134,18 +158,44 @@ async def http_exception_handler(request, exc):
 
 @app.websocket("/ws/process_progress")
 async def websocket_endpoint(websocket: WebSocket):
+    """WebSocket endpoint for process progress updates."""
     await manager.connect(websocket)
     try:
         while True:
-            data = await websocket.receive_text()
-            await websocket.send_json({
-                "type": "progress",
-                "message": f"Received: {data}"
-            })
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
+            try:
+                # Wait for messages with a timeout
+                data = await asyncio.wait_for(
+                    websocket.receive_json(),
+                    timeout=manager.heartbeat_interval * 2
+                )
+                
+                # Handle client messages if needed
+                if isinstance(data, dict):
+                    message_type = data.get('type')
+                    if message_type == 'heartbeat_ack':
+                        continue
+                    elif message_type == 'start_processing':
+                        # Client indicates they're ready to receive updates
+                        await websocket.send_json({
+                            "type": "status",
+                            "message": "Connected and ready for processing updates"
+                        })
+                
+            except asyncio.TimeoutError:
+                # No message received within timeout, connection might be stale
+                continue
+            except WebSocketDisconnect:
+                break
+            except json.JSONDecodeError:
+                logger.warning("Received invalid JSON message")
+                continue
+            except Exception as e:
+                logger.error(f"Error handling WebSocket message: {str(e)}")
+                break
+    
     except Exception as e:
-        logger.error(f"WebSocket error: {str(e)}")
+        logger.error(f"WebSocket connection error: {str(e)}")
+    finally:
         manager.disconnect(websocket)
 
 async def broadcast_progress(message: dict):
@@ -547,65 +597,93 @@ def load_json_file(filepath: Path) -> list:
         logger.error(f"Unexpected error reading {filepath}: {e}")
     return []
 
-@app.get("/api/invoice_pdf/{invoice_id}")
-async def get_invoice_pdf(invoice_id: str):
+@app.get("/api/invoice_pdf/{invoice_number}")
+async def get_invoice_pdf(invoice_number: str):
     """Get PDF for an invoice by streaming from S3."""
-    if not invoice_id:
+    if not invoice_number:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invoice ID is required"
+            detail="Invoice number is required"
         )
-
-    logger.debug(f"Looking for PDF for invoice_id: {invoice_id}")
-
-    # Get invoice from database to get S3 URL
+    logger.debug(f"Looking for PDF for invoice_number: {invoice_number}")
+    
     try:
         db = InvoiceDB()
-        invoice = db.get_invoice_by_id(invoice_id)
+        # Query by invoice_number instead of id
+        query_result = db.get_all_invoices()
+        invoice = next((inv for inv in query_result if inv['invoice_number'] == invoice_number), None)
+        
         if not invoice:
             raise HTTPException(
                 status_code=404,
-                detail=f"Invoice {invoice_id} not found"
+                detail=f"Invoice {invoice_number} not found"
             )
         
         if not invoice['pdf_url']:
             raise HTTPException(
                 status_code=404,
-                detail=f"PDF URL not found for invoice {invoice_id}"
+                detail=f"PDF URL not found for invoice {invoice_number}"
             )
-
-        # Use invoice_number for S3 key since that's how we store them
-        s3_key = f"invoices/{invoice['invoice_number']}.pdf"
-        logger.debug(f"Fetching S3 object with key: {s3_key}")
+        
+        # Rest of the function remains the same
+        try:
+            from urllib.parse import urlparse
+            parsed_url = urlparse(invoice['pdf_url'])
+            path_parts = parsed_url.path.lstrip('/').split('/')
+            if len(path_parts) < 2:
+                raise ValueError("Invalid S3 URL format")
+            bucket_name = parsed_url.netloc.split('.')[0]
+            s3_key = '/'.join(path_parts)
+        except Exception as e:
+            logger.error(f"Error parsing S3 URL {invoice['pdf_url']}: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Invalid S3 URL format: {str(e)}"
+            )
         
         try:
-            # Get the PDF from S3
-            s3_client = boto3.client("s3")
-            response = s3_client.get_object(
-                Bucket=BUCKET_NAME,
-                Key=s3_key
-            )
+            # Get the PDF from S3 with exponential backoff retry
+            s3_client = boto3.client('s3')
+            max_retries = 3
+            retry_delay = 1
             
-            # Stream the PDF content
+            for attempt in range(max_retries):
+                try:
+                    response = s3_client.get_object(
+                        Bucket=bucket_name,
+                        Key=s3_key
+                    )
+                    break
+                except ClientError as s3_error:
+                    if attempt == max_retries - 1:
+                        raise
+                    error_code = s3_error.response['Error']['Code']
+                    if error_code in ['NoSuchKey', 'NoSuchBucket']:
+                        raise
+                    logger.warning(f"S3 get attempt {attempt + 1} failed, retrying in {retry_delay}s...")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+            
             return StreamingResponse(
                 response['Body'].iter_chunks(),
                 media_type="application/pdf",
                 headers={
                     "Content-Disposition": f'inline; filename="{invoice["invoice_number"]}.pdf"',
-                    "Cache-Control": "no-cache"
+                    "Cache-Control": "no-cache",
+                    "X-Accel-Buffering": "no"  # Disable nginx buffering if using it
                 }
             )
             
         except ClientError as e:
             error_code = e.response['Error']['Code']
-            if (error_code == 'NoSuchKey'):
-                logger.error(f"PDF not found in S3 bucket: {BUCKET_NAME}/{s3_key}")
+            if error_code in ['NoSuchKey', 'NoSuchBucket']:
+                logger.error(f"PDF not found in S3: {bucket_name}/{s3_key}")
                 raise HTTPException(
                     status_code=404,
-                    detail=f"PDF not found in S3 for invoice {invoice_id}"
+                    detail=f"PDF not found in S3 for invoice {invoice_number}"
                 )
             else:
-                logger.error(f"S3 error retrieving PDF for invoice {invoice_id}: {str(e)}")
+                logger.error(f"S3 error retrieving PDF for invoice {invoice_number}: {str(e)}")
                 raise HTTPException(
                     status_code=500,
                     detail=f"Failed to retrieve PDF from S3: {str(e)}"
@@ -614,7 +692,7 @@ async def get_invoice_pdf(invoice_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error retrieving PDF for invoice {invoice_id}: {str(e)}")
+        logger.error(f"Error retrieving PDF for invoice {invoice_number}: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"Error retrieving PDF: {str(e)}"
@@ -631,10 +709,9 @@ class InvoiceUpdate(BaseModel):
 @app.put("/api/invoices/{invoice_id}")
 async def update_invoice(invoice_id: str, update_data: InvoiceUpdate):
     try:
-        # Convert update data to database format
         db = InvoiceDB()
         
-        # First check if invoice exists by trying to get it
+        # First check if invoice exists
         existing_invoice = db.get_invoice_by_id(invoice_id)
         if not existing_invoice:
             raise HTTPException(
@@ -649,21 +726,29 @@ async def update_invoice(invoice_id: str, update_data: InvoiceUpdate):
             'invoice_date': update_data.invoice_date,
             'total_amount': update_data.total_amount,
             'status': update_data.validation_status or existing_invoice['status'],
-            'pdf_url': existing_invoice['pdf_url']  # Keep existing PDF URL
+            'confidence': update_data.confidence or existing_invoice.get('confidence', 0.0)
         }
         
-        # Update the database
-        success = db.update_invoice_status(invoice_id, db_entry['status'])
+        # Update the database with all fields
+        success = db.update_invoice_status(invoice_id, db_entry['status'], update_data=db_entry)
         if not success:
             raise HTTPException(
                 status_code=500,
                 detail=f"Failed to update invoice {invoice_id}"
             )
             
+        # Fetch the updated invoice
+        updated_invoice = db.get_invoice_by_id(invoice_id)
+        if not updated_invoice:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to fetch updated invoice {invoice_id}"
+            )
+            
         return {
             "status": "success",
             "message": f"Invoice {invoice_id} updated successfully",
-            "updated_invoice": db.get_invoice_by_id(invoice_id)
+            "updated_invoice": updated_invoice
         }
         
     except HTTPException:
