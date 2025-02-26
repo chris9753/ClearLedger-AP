@@ -154,7 +154,8 @@ class InvoiceDB:
                 cursor.execute("""
                     SELECT 
                         id, invoice_number, vendor_name, invoice_date,
-                        total_amount, status, pdf_url, created_at
+                        total_amount, status, pdf_url, created_at,
+                        confidence, total_time
                     FROM invoice_metadata
                     WHERE id = ?
                 """, (invoice_id,))
@@ -164,25 +165,55 @@ class InvoiceDB:
                 return None
         except sqlite3.Error as e:
             logger.error(f"Failed to fetch invoice {invoice_id}: {e}")
-            raise
+            return None  # Return None on database error
+        except Exception as e:
+            logger.error(f"Unexpected error fetching invoice {invoice_id}: {e}")
+            return None  # Return None on any other error
 
     @retry_on_error()
-    def update_invoice_status(self, invoice_id: int, new_status: str) -> bool:
-        """Update the status of an invoice."""
-        logger.debug(f"Updating status of invoice {invoice_id} to {new_status}")
+    def update_invoice_status(self, invoice_id: int, new_status: str, update_data: Optional[Dict[str, Any]] = None) -> bool:
+        """Update the status and optionally other fields of an invoice."""
+        logger.debug(f"Updating invoice {invoice_id} with status {new_status}")
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("""
-                    UPDATE invoice_metadata
-                    SET status = ?
-                    WHERE id = ?
-                """, (new_status, invoice_id))
+                if update_data:
+                    # Build dynamic update query
+                    fields = ['status = ?']
+                    params = [new_status]
+                    for key, value in update_data.items():
+                        if key not in ['id', 'created_at']:  # Protect these fields
+                            fields.append(f"{key} = ?")
+                            params.append(value)
+                    params.append(invoice_id)
+                    
+                    query = f"""
+                        UPDATE invoice_metadata
+                        SET {', '.join(fields)}
+                        WHERE id = ?
+                    """
+                    cursor.execute(query, params)
+                else:
+                    cursor.execute("""
+                        UPDATE invoice_metadata
+                        SET status = ?
+                        WHERE id = ?
+                    """, (new_status, invoice_id))
+                
                 conn.commit()
-                return cursor.rowcount > 0
+                rows_affected = cursor.rowcount
+                if rows_affected > 0:
+                    logger.info(f"Successfully updated invoice {invoice_id}")
+                    return True
+                logger.warning(f"No invoice found with ID {invoice_id}")
+                return False
+                
         except sqlite3.Error as e:
-            logger.error(f"Failed to update invoice {invoice_id} status: {e}")
-            raise
+            logger.error(f"Failed to update invoice {invoice_id}: {e}")
+            return False  # Return False on database error
+        except Exception as e:
+            logger.error(f"Unexpected error updating invoice {invoice_id}: {e}")
+            return False  # Return False on any other error
 
     @retry_on_error()
     def delete_invoice(self, invoice_id: int) -> bool:
