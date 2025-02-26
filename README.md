@@ -8,27 +8,30 @@
 
 ## 🎯 Overview
 
-A sophisticated invoice processing system that leverages LangChain's multi-agent workflow to automate extraction, validation, and purchase order (PO) matching. Built as a technical challenge for Brim's Agentic AI Engineer position, this solution aims to reduce manual processing time by over 75% while maintaining high accuracy through intelligent error handling and human-in-the-loop review processes.
+A sophisticated invoice processing system that leverages LangChain's multi-agent workflow to automate extraction, validation, and purchase order (PO) matching. Built as a technical challenge for Brim's Agentic AI Engineer position, this solution reduces manual processing time by over 75% while ensuring high accuracy through intelligent error handling and human-in-the-loop review processes.
+
+**Key Updates:**
+- Migrated from JSON-based storage to SQLite (`invoices.db`) for invoice metadata, boosting scalability and query efficiency.
+- Integrated AWS S3 for PDF storage with public read access, replacing local file storage for better reliability and scalability.
 
 ## 📋 Key Features
 
 - **Intelligent Processing Pipeline**
-  - Processes PDFs from:
-    - `data/raw/invoices/` (35 invoices)
+  - Processes PDFs from `data/raw/invoices/` (35 invoices), now stored in AWS S3
   - Multi-agent system for extraction, validation, and matching
-  - RAG-based error handling with FAISS `data/raw/test_samples/` -> (5 faulty PDFs examples to reduce the need for human review)
-  - Asynchronous processing with robust error management
+  - RAG-based error handling with FAISS using `data/raw/test_samples/` (5 faulty PDFs to minimize human review)
+  - Asynchronous processing with SQLite-backed metadata storage
 
 - **Modern Frontend Interface**
   - Next.js-powered dashboard
-  - Real-time processing updates
-  - Interactive invoice review system
+  - Real-time processing updates via WebSockets
+  - Interactive invoice review system with S3-hosted PDF previews
   - Comprehensive metrics visualization
 
 - **Enterprise-Grade Architecture**
   - FastAPI backend with WebSocket support
-  - Structured logging and monitoring
-  - Comprehensive test coverage
+  - SQLite database (`invoices.db`) for structured data
+  - AWS S3 for scalable PDF storage
   - Containerized deployment ready
 
 ## Development Journey
@@ -160,6 +163,38 @@ A sophisticated invoice processing system that leverages LangChain's multi-agent
   - Verified `frontend-nextjs/src/pages/anomalies.tsx` integration, confirming it’s linked to the backend via `lib/api.ts` for anomaly retrieval, and kept as a functional page.
   - Ensured `lib/api.ts` only handles API client logic without duplicating backend processing, maintaining clear separation of concerns.
 
+#### Day 7 and 8: Implemented SQLite and AWS (S3) Database
+
+- 🎯 **Objectives Achieved**
+  - Stabilized backend operations
+  - Resolved frontend compatibility issues
+  - Fixed critical bugs in processing pipeline
+  - Resolved batch processing stalls
+  - Restored PDF viewing functionality
+  - Fixed infinite loading issues
+
+## Migration Challenges and Solutions
+
+The transition to SQLite and AWS S3 brought significant improvements but wasn’t without its hurdles. Here’s how we tackled the key issues:
+
+- **S3 Upload Errors**
+  - **Problem:** Uploads failed due to ACL parameter conflicts.
+  - **Fix:** Removed `'ACL': 'public-read'` from the upload code and configured bucket policies for public read access instead.
+
+- **WebSocket Instability**
+  - **Problem:** Connections dropped during batch processing, showing "CLOSING or CLOSED state" errors.
+  - **Fix:** Added a `ConnectionManager` with heartbeat checks and reconnection logic to keep WebSockets rock-solid.
+
+- **Database Migration Headaches**
+  - **Problem:** Moving from `structured_invoices.json` to SQLite risked duplicates and data loss.
+  - **Fix:** Wrote `migrate_json_to_db.py` to check for existing records, upload PDFs to S3, and ensure a smooth transition.
+
+- **Anomalies Page Glitch**
+  - **Problem:** The page showed "[object Object]" due to a bad `page` parameter.
+  - **Fix:** Updated `anomalies.tsx` to enforce numeric `page` values, restoring proper data display.
+
+These fixes made the system more robust, scalable, and ready for production!
+
 ## Architecture
 
 ### Project Structure
@@ -174,6 +209,7 @@ clear_ledger_nextjs/
 ├── README.md
 ├── requirements.txt
 ├── .gitignore
+├── invoices.db  # SQLite database for invoice metadata
 ├── agents/
 │   ├── __init__.py
 │   ├── base_agent.py
@@ -197,7 +233,6 @@ clear_ledger_nextjs/
 ├── data/
 │   ├── processed/
 │   │   └── anomalies.json
-│   │   └── structured_invoices.json
 │   ├── raw/
 │   │   └── invoices/ *pdfs
 │   │   └── test_invoice.txt
@@ -247,20 +282,19 @@ clear_ledger_nextjs/
 └── workflows/
     ├── __init__.py
     ├── orchestrator.py  
-      
 ```
 
 ### Architecture Diagram (both project variants; different reps)
 
 ```plaintext
-+-------------------+       +-------------------+
-|   Streamlit UI    |       |    Next.js UI     |
-| (Python-based)    |       | (Production-ready)|
-| - Streamlit       |       | - React, Next.js  |
-|   Dashboard       |       | - Tailwind CSS    |
-+-------------------+       +-------------------+
-           |                         |
-           +-----------+-------------+
++-------------------+
+|    Next.js UI     |
+| (Production-ready)|
+| - React, Next.js  |
+| - Tailwind CSS    |
++-------------------+
+           |
+           +-----------+
                        |
                 +------+------+
                 | FastAPI     |
@@ -301,12 +335,13 @@ clear_ledger_nextjs/
                 | - FAISS RAG  |
                 +------+------+
                        |
-                +------+------+
-                | Data Storage|
-                | - structured|
-                |   _invoices |
-                | - anomalies  |
-                +------+------+
+           +-----------+-------------+
+           |                         |
++-------------------+       +-------------------+
+| SQLite Database  |       |    AWS S3         |
+| - invoices.db     |       | - PDF Storage     |
+| - Metadata        |       | - Public Read     |
++-------------------+       +-------------------+
 ```
 
 ```mermaid
@@ -335,9 +370,10 @@ flowchart TD
     subgraph "Data Processing & Storage"
         D1[RAG Helper<br>Error Classification] --> C3
         D2[Raw PDFs<br>data/raw/invoices/] --> C1
-        C6 --> D3[Structured JSON<br>structured_invoices.json]
+        C6 --> D3[SQLite Database<br>invoices.db]
         C3 --> D4[Vendor Data<br>vendor_data.csv]
         C6 --> D5[Logs & Metrics<br>monitoring.py]
+        C6 --> D6[AWS S3<br>PDF Storage]
     end
 
     %% Connections
