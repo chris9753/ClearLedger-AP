@@ -1,21 +1,25 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { getAnomalies } from "../../lib/api";
 import { Anomaly } from '../types';
 
 export default function AnomaliesPage() {
+  const [currentPage, setCurrentPage] = useState(1);
+  const perPage = 10;
+
   const { 
-    data: anomalies = [],
+    data: anomaliesData,
     isLoading,
     isError,
     error,
     refetch
   } = useQuery({
-    queryKey: ['anomalies'],
-    queryFn: getAnomalies,
+    queryKey: ['anomalies', currentPage],
+    queryFn: () => getAnomalies(currentPage, perPage),
     retry: 2,
-    staleTime: 30000, // Consider data fresh for 30 seconds
-    gcTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 30000,
+    gcTime: 5 * 60 * 1000,
   });
 
   const getAnomalyTypeColor = (type: Anomaly['type']) => {
@@ -31,7 +35,7 @@ export default function AnomaliesPage() {
   };
 
   // Sort anomalies by timestamp in descending order
-  const sortedAnomalies = [...(anomalies || [])].sort((a, b) => 
+  const sortedAnomalies = [...(anomaliesData?.data || [])].sort((a, b) => 
     new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
 
@@ -107,6 +111,28 @@ export default function AnomaliesPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {anomaliesData?.pagination && anomaliesData.pagination.total_pages > 1 && (
+        <div className="mt-6 flex justify-center space-x-2">
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <span className="px-3 py-1">
+            Page {currentPage} of {anomaliesData.pagination.total_pages}
+          </span>
+          <button
+            onClick={() => setCurrentPage(p => Math.min(anomaliesData.pagination.total_pages, p + 1))}
+            disabled={currentPage === anomaliesData.pagination.total_pages}
+            className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+          >
+            Next
+          </button>
         </div>
       )}
     </div>
