@@ -130,8 +130,8 @@ def upload_to_s3(file_path: str, max_retries: int = 3) -> str:
             
             # Upload file with content-type set for PDFs
             extra_args = {
-                'ContentType': 'application/pdf',
-                'ACL': 'public-read'
+                'ContentType': 'application/pdf'
+                # ACL removed as bucket policy handles public access
             }
             
             s3_client.upload_file(
