@@ -44,25 +44,25 @@ export async function getInvoices(): Promise<Invoice[]> {
 
 export async function getInvoicePdf(invoiceId: string): Promise<Blob> {
     const response = await fetch(`${process.env.NEXT_PUBLIC_MAIN_API_URL}/api/invoice_pdf/${invoiceId}`);
+    
     if (!response.ok) {
         const contentType = response.headers.get('Content-Type');
         if (contentType?.includes('application/json')) {
-            const data = await response.json();
-            // For S3-based PDFs that return a URL
-            if (data.pdf_url) {
-                const pdfResponse = await fetch(data.pdf_url);
-                if (!pdfResponse.ok) {
-                    throw new Error('Failed to retrieve PDF from S3');
-                }
-                return pdfResponse.blob();
-            }
-            throw new Error(data.detail || 'Failed to retrieve PDF');
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Failed to retrieve PDF');
         }
         if (response.status === 404) {
             throw new Error('PDF not found for this invoice');
         }
         throw new Error('Failed to retrieve PDF');
     }
+    
+    // Verify we got a PDF
+    const contentType = response.headers.get('Content-Type');
+    if (!contentType?.includes('application/pdf')) {
+        throw new Error('Invalid response: not a PDF');
+    }
+    
     return response.blob();
 }
 
