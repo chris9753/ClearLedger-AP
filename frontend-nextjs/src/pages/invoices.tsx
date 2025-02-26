@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
-import { getInvoices } from '../../lib/api';
+import { getInvoices, getInvoicePdf } from '../../lib/api';
 import type { Invoice } from '../types';
 
 const MAX_RETRIES = 3;
@@ -48,6 +48,35 @@ export default function InvoicesPage() {
             isMounted.current = false;
         };
     }, []);
+
+    const handleViewPdf = async (invoiceNumber: string) => {
+        try {
+            const blob = await getInvoicePdf(invoiceNumber);
+            const url = window.URL.createObjectURL(blob);
+            const newWindow = window.open(url, '_blank');
+            if (!newWindow) {
+                toast.error('Please allow popups to view PDFs');
+            }
+            // Clean up the blob URL after a delay to ensure it's loaded
+            setTimeout(() => {
+                window.URL.revokeObjectURL(url);
+            }, 1000);
+        } catch (error) {
+            console.error('Error viewing PDF:', error);
+            let errorMessage = 'Failed to load PDF';
+            if (error instanceof Error) {
+                // Handle specific error messages from the API
+                if (error.message.includes('not found')) {
+                    errorMessage = 'PDF not found. The file may have been deleted or moved.';
+                } else if (error.message.includes('Failed to retrieve PDF from S3')) {
+                    errorMessage = 'Unable to retrieve PDF from storage. Please try again later.';
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+            toast.error(errorMessage);
+        }
+    };
 
     // Sort invoices by created_at (newest first) with type guard to ensure invoices is iterable
     const sortedInvoices: Invoice[] = invoices && Array.isArray(invoices)
@@ -110,9 +139,12 @@ export default function InvoicesPage() {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">{invoice.status || invoice.validation_status?.trim() || "Unknown"}</td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        <Link href={invoice.pdf_url} target="_blank" className="text-blue-500 hover:underline">
+                                        <button
+                                            onClick={() => handleViewPdf(invoice.invoice_number)}
+                                            className="text-blue-500 hover:underline"
+                                        >
                                             View PDF
-                                        </Link>
+                                        </button>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">{invoice.created_at}</td>
                                 </tr>
