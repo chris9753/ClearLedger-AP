@@ -41,14 +41,13 @@ export default function MetricsPage() {
     try {
       const invoices = await fetchMetricsWithTimeout();
       const total = invoices.length;
-      const valid = invoices.filter(invoice => invoice.validation_status === 'valid').length;
+      const valid = invoices.filter(invoice => invoice.status === 'valid').length;
       
-      const avgTime = invoices.reduce((sum, invoice) => 
-        sum + (invoice.total_time || 0), 0) / total;
+      const avgTime = total ? invoices.reduce((sum, invoice) => 
+        sum + (invoice.total_time || 0), 0) / total : 0;
       
-      const highConfidenceCount = invoices.filter(invoice => 
-        invoice.confidence > 0.8).length;
-      const highConfidencePct = (highConfidenceCount / total) * 100;
+      const highConfidenceCount = invoices.filter(invoice => (invoice.confidence || 0) >= 0.7).length;
+      const highConfidencePct = total ? (highConfidenceCount / total) * 100 : 0;
 
       setMetrics({ 
         total, 
