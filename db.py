@@ -1,6 +1,6 @@
 import sqlite3
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, List
 import time
 from functools import wraps
 import logging
@@ -91,6 +91,29 @@ class InvoiceDB:
             logger.error(f"Failed to insert invoice: {e}")
             raise
 
+    @retry_on_error()
+    def get_all_invoices(self) -> List[Dict[str, Any]]:
+        """Retrieve all invoices from the database."""
+        logger.debug("Fetching all invoices from database")
+        try:
+            with sqlite3.connect(str(self.db_path)) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT 
+                        id, invoice_number, vendor_name, invoice_date,
+                        total_amount, status, pdf_url, created_at
+                    FROM invoice_metadata
+                    ORDER BY created_at DESC
+                """)
+                rows = cursor.fetchall()
+                invoices = [dict(row) for row in rows]
+                logger.info(f"Retrieved {len(invoices)} invoices from database")
+                return invoices
+        except sqlite3.Error as e:
+            logger.error(f"Failed to fetch invoices: {e}")
+            raise
+
     def __del__(self):
         """Ensure proper cleanup of database connections."""
         logger.info("Cleaning up database connections")
@@ -109,4 +132,4 @@ if __name__ == "__main__":
         db.insert_invoice(test_data)
     except Exception as e:
         logger.error(f"Error in main: {e}")
-        raise  
+        raise
