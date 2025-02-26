@@ -14,7 +14,7 @@ export default function InvoicesPage() {
     const isMounted = useRef(true);
 
     const { 
-        data: invoices = [], // Provide empty array as default
+        data: invoices = [] as Invoice[], // Add explicit type here
         isLoading, 
         isError,
         error: queryError,
@@ -26,7 +26,7 @@ export default function InvoicesPage() {
         retry: MAX_RETRIES - 1,
         retryDelay: (attempt) => RETRY_DELAY * (attempt + 1),
         staleTime: 30000, // Consider data fresh for 30 seconds
-        cacheTime: 5 * 60 * 1000, // Cache for 5 minutes
+        gcTime: 5 * 60 * 1000, // Cache for 5 minutes
     });
 
     // Reset error state on success
@@ -96,7 +96,7 @@ export default function InvoicesPage() {
     };
 
     // Sort invoices by created_at (newest first)
-    const sortedInvoices = [...(invoices || [])].sort((a, b) => 
+    const sortedInvoices = (invoices ?? []).sort((a, b) => 
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
 
