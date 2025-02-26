@@ -15,7 +15,7 @@ RAW_DIR = Path("data/raw/invoices")
 INVOICES_FILE = PROCESSED_DIR / "structured_invoices.json"
 
 async def migrate_invoices():
-    """Migrate invoices from JSON to SQLite. S3 upload will be handled separately if needed."""
+    """Migrate invoices from JSON to SQLite and upload PDFs to S3."""
     try:
         if not INVOICES_FILE.exists():
             logger.error(f"Invoice file not found: {INVOICES_FILE}")
@@ -30,8 +30,8 @@ async def migrate_invoices():
             
         logger.info(f"Found {len(invoices)} invoices to migrate")
         
-        # Initialize database connection
         db = InvoiceDB()
+        s3_client = boto3.client("s3")
         migrated = 0
         errors = 0
         skipped = 0
@@ -47,12 +47,40 @@ async def migrate_invoices():
                         continue
                 except:
                     pass  # If get_invoice_by_id fails, we'll try to insert
-
-                # Use existing PDF URL if available, otherwise set to empty string
-                # This can be updated later when S3 is properly configured
-                pdf_url = invoice.get('pdf_url', '')
                 
-                # Prepare database entry
+                # Try multiple locations for the PDF
+                pdf_paths = [
+                    PROCESSED_DIR / f"{invoice['invoice_number']}.pdf",
+                    RAW_DIR / invoice.get('file_name', ''),
+                    RAW_DIR / f"{invoice['invoice_number']}.pdf"
+                ]
+                
+                pdf_path = None
+                for path in pdf_paths:
+                    if path.exists():
+                        pdf_path = path
+                        break
+                
+                if pdf_path:
+                    try:
+                        s3_key = f"invoices/{invoice['invoice_number']}.pdf"
+                        try:
+                            s3_client.head_object(Bucket=BUCKET_NAME, Key=s3_key)
+                            pdf_url = f"https://{BUCKET_NAME}.s3.amazonaws.com/{s3_key}"
+                            logger.info(f"PDF already exists in S3: {pdf_url}")
+                        except ClientError as e:
+                            if e.response['Error']['Code'] == '404':
+                                pdf_url = upload_to_s3(str(pdf_path))
+                                logger.info(f"Uploaded PDF to S3: {pdf_url}")
+                            else:
+                                raise
+                    except Exception as s3_error:
+                        logger.error(f"S3 error for invoice {invoice['invoice_number']}: {str(s3_error)}")
+                        pdf_url = ''  # Fallback to empty string if S3 fails
+                else:
+                    logger.warning(f"PDF file not found for invoice {invoice['invoice_number']}")
+                    pdf_url = invoice.get('pdf_url', '')
+                
                 db_entry = {
                     'invoice_number': invoice['invoice_number'],
                     'vendor_name': invoice['vendor_name'],
@@ -60,11 +88,10 @@ async def migrate_invoices():
                     'total_amount': float(invoice['total_amount']),
                     'status': invoice.get('validation_status', 'valid'),
                     'pdf_url': pdf_url,
-                    'confidence': invoice.get('confidence', 0.95),  # Default 0.95 for existing entries
-                    'total_time': invoice.get('total_time', 0.0)   # Default 0.0 for existing entries
+                    'confidence': invoice.get('confidence', 0.95),
+                    'total_time': invoice.get('total_time', 0.0)
                 }
                 
-                # Insert into database
                 db.insert_invoice(db_entry)
                 migrated += 1
                 logger.info(f"Successfully migrated invoice {invoice['invoice_number']}")
@@ -74,7 +101,7 @@ async def migrate_invoices():
                 errors += 1
                 
         logger.info(f"Migration completed: {migrated} migrated, {errors} errors, {skipped} skipped")
-        return migrated > 0
+        return migrated > 0 and errors == 0
         
     except Exception as e:
         logger.error(f"Migration failed: {str(e)}")
