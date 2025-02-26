@@ -35,7 +35,7 @@ export default function UploadPage() {
     total: number;
     failed: number;
     currentFile?: string;
-    skipped?: number;
+    skipped: number;  // Make skipped required with default 0
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [wsState, setWsState] = useState<{
@@ -50,7 +50,6 @@ export default function UploadPage() {
     lastMessage: 0
   });
   const progressBarRef = useRef<HTMLDivElement>(null);
-  const wsTimeoutRef = useRef<NodeJS.Timeout>();
   const MAX_RECONNECT_ATTEMPTS = 5;
   const RECONNECT_DELAY = 2000;
   const UPDATE_TIMEOUT = 30000; // 30 seconds
@@ -124,7 +123,14 @@ export default function UploadPage() {
                 break;
 
               case 'warning':
-                toast.warning(`${data.file}: ${data.message}`);
+                // Use toast.error with custom styling for warnings
+                toast.error(`${data.file}: ${data.message}`, {
+                  style: {
+                    background: '#fff7ed',
+                    color: '#9a3412',
+                    border: '1px solid #fdba74'
+                  }
+                });
                 break;
 
               case 'complete':
@@ -189,13 +195,13 @@ export default function UploadPage() {
       clearInterval(keepAliveInterval);
       clearInterval(healthCheck);
     };
-  }, [isProcessingAll, wsState.reconnectAttempt]);
+  }, [isProcessingAll, wsState.reconnectAttempt, wsState.connected, wsState.lastMessage]);
 
   // Progress bar updates
   useEffect(() => {
     if (processingStatus && progressBarRef.current) {
       const percent = Math.min((processingStatus.current / processingStatus.total) * 100, 100);
-      progressBarRef.current.style.width = `${percent}%`;
+      progressBarRef.current.style.setProperty('--progress-width', `${percent}%`);
       
       // Update document title with progress
       document.title = processingStatus.current === processingStatus.total 
@@ -213,7 +219,8 @@ export default function UploadPage() {
     setProcessingStatus({
       current: 0,
       total: 0,
-      failed: 0
+      failed: 0,
+      skipped: 0
     });
     
     try {
@@ -262,7 +269,14 @@ export default function UploadPage() {
       if (data.status === 'success') {
         toast.success('Invoice uploaded successfully');
       } else if (data.status === 'warning' && data.type === 'duplicate_invoice') {
-        toast.warning('This invoice has already been processed');
+        // Use toast.error with custom styling for warnings
+        toast.error('This invoice has already been processed', {
+          style: {
+            background: '#fff7ed',
+            color: '#9a3412',
+            border: '1px solid #fdba74'
+          }
+        });
       } else if (data.status === 'error') {
         toast.error(data.detail || 'Upload failed');
       }
@@ -347,8 +361,7 @@ export default function UploadPage() {
               <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
                 <div 
                   ref={progressBarRef}
-                  className="h-full bg-green-600 transition-all duration-300 ease-out"
-                  style={{ width: '0%' }}
+                  className="progress-bar"
                 ></div>
               </div>
               {processingStatus.currentFile && (
