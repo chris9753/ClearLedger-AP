@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from fastapi import FastAPI, UploadFile, File, HTTPException, status, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
 from config.logging_config import logger
+from db import InvoiceDB  # Import InvoiceDB for database operations
 
 from workflows.orchestrator import InvoiceProcessingWorkflow
 
@@ -391,6 +392,22 @@ async def get_invoices():
     except Exception as e:
         logger.error(f"Error reading invoices: {str(e)}")
         return []
+
+@app.get("/invoices")
+async def get_db_invoices():
+    """Get all invoices from the SQLite database."""
+    try:
+        logger.info("Fetching all invoices from database")
+        db = InvoiceDB()
+        invoices = db.get_all_invoices()
+        logger.info(f"Successfully retrieved {len(invoices)} invoices from database")
+        return invoices
+    except Exception as e:
+        logger.error(f"Error fetching invoices from database: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve invoices: {str(e)}"
+        )
 
 def load_json_file(filepath: Path) -> list:
     try:
