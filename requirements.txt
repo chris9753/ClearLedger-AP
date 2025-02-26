@@ -22,5 +22,6 @@ flake8
 pytest
 faiss-cpu
 websockets
-boto3==1.37.1
-awscli==1.38.1
+boto3>=1.37.1
+python-multipart>=0.0.5
+python-dotenv>=0.19.0
