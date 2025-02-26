@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { getInvoicePdf, getInvoices } from '../../lib/api';
+import { getInvoicePdf, getInvoices, updateInvoiceStatus } from '../../lib/api';
 import { Invoice } from '../types';
 
-// Updated Yup schema to expect invoice_date as string
 const schema = yup.object().shape({
   vendor_name: yup.string().required('Vendor name is required'),
   total_amount: yup.number().positive('Total must be positive').required('Total is required'),
@@ -15,7 +15,6 @@ const schema = yup.object().shape({
     .matches(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
 });
 
-// Update FormInputs type to use string for invoice_date
 type FormInputs = {
   vendor_name: string;
   total_amount: number;
@@ -24,25 +23,41 @@ type FormInputs = {
 };
 
 export default function ReviewPage() {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const perPage = 10;
 
-  // Updated function to handle downloading PDF
+  const { 
+    data: invoiceData,
+    isLoading,
+    isError,
+    error,
+    refetch
+  } = useQuery({
+    queryKey: ['invoices', currentPage],
+    queryFn: () => getInvoices(currentPage, perPage, 'created_at', 'desc'),
+    retry: 2,
+    staleTime: 30000,
+    gcTime: 5 * 60 * 1000,
+  });
+
+  const reviewInvoices = (invoiceData?.data || []).filter(invoice => 
+    invoice.status === "needs_review" || 
+    invoice.status === "failed" ||
+    (invoice.confidence !== undefined && invoice.confidence < 0.7)
+  );
+
   const handleViewPdf = async (invoiceId: string) => {
     if (!invoiceId || invoiceId === 'undefined') {
       toast.error("No invoice ID available to view PDF.");
       return;
     }
     
-    console.log('Attempting to view PDF for invoice:', invoiceId);
+    const toastId = toast.loading('Downloading PDF...');
     let objectUrl: string | undefined;
     
     try {
       const blob = await getInvoicePdf(invoiceId);
-      console.log('Received blob:', blob);
-      
       objectUrl = window.URL.createObjectURL(blob);
       
       const downloadLink = document.createElement('a');
@@ -52,9 +67,13 @@ export default function ReviewPage() {
       downloadLink.click();
       document.body.removeChild(downloadLink);
       
+      toast.success('PDF downloaded successfully', { id: toastId });
     } catch (error) {
       console.error('Error downloading PDF:', error);
-      toast.error(`Failed to fetch PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(
+        `Failed to fetch PDF: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        { id: toastId }
+      );
     } finally {
       if (objectUrl) {
         window.URL.revokeObjectURL(objectUrl);
@@ -62,142 +81,134 @@ export default function ReviewPage() {
     }
   };
 
-  const fetchInvoices = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const fetchedInvoices = await getInvoices();
-      // Filter to only show invoices that need review or have confidence below threshold
-      const reviewInvoices = fetchedInvoices.filter((invoice) => 
-        invoice.status === "needs_review" || 
-        invoice.status === "failed" ||
-        (invoice.confidence !== undefined && invoice.confidence < 0.7)
-      );
-      setInvoices(reviewInvoices);
-    } catch (err) {
-      console.error('Error fetching invoices:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load invoices');
-      toast.error('Failed to load invoices for review');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchInvoices();
-  }, []);
-
-  // Enhanced onSubmit with better error handling
-  const onSubmit: (data: FormInputs) => Promise<void> = async (data: FormInputs) => {
-    if (!selectedInvoice?.invoice_number) {
+  const onSubmit = async (data: FormInputs) => {
+    if (!selectedInvoice?.id) {
       toast.error('No invoice selected');
       return;
     }
 
-    setLoading(true);
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_MAIN_API_URL}/api/invoices/${selectedInvoice.invoice_number}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...data,
-          validation_status: 'valid',  // After review, mark as valid
-          confidence: 1.0  // Set confidence to 1.0 after manual review
-        }),
+      await updateInvoiceStatus(selectedInvoice.id.toString(), {
+        ...data,
+        validation_status: 'valid',
+        confidence: 1.0
       });
-
+      
       toast.success('Invoice updated successfully');
       setSelectedInvoice(null);
-      await fetchInvoices(); // Refresh the list
+      refetch(); // Refresh the list
     } catch (error) {
       console.error('Error saving invoice:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to save invoice');
-      setError(error instanceof Error ? error.message : String(error));
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
     <div className="max-w-7xl mx-auto py-6">
       <h1 className="text-2xl font-bold mb-6">Review Invoices</h1>
-      {error && <p className="text-red-500 mb-4">{error}</p>}
       
-      {loading && (
-        <p className="text-gray-500 text-center py-4">Loading invoices for review...</p>
+      {isError && (
+        <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-4">
+          <p className="text-red-700">{error instanceof Error ? error.message : 'Failed to load invoices'}</p>
+        </div>
       )}
       
-      {!loading && invoices.length === 0 && (
+      {isLoading ? (
+        <div className="flex justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          <p className="ml-2 text-gray-600">Loading invoices for review...</p>
+        </div>
+      ) : reviewInvoices.length === 0 ? (
         <p className="text-gray-500 text-center py-8">No invoices require review at this time.</p>
-      )}
-      
-      {selectedInvoice ? (
-        // Begin form with react-hook-form
-        <FormSection selectedInvoice={selectedInvoice} onSubmit={onSubmit} setSelectedInvoice={setSelectedInvoice} loading={loading} />
+      ) : selectedInvoice ? (
+        <FormSection 
+          selectedInvoice={selectedInvoice} 
+          onSubmit={onSubmit} 
+          setSelectedInvoice={setSelectedInvoice} 
+          isSubmitting={false} 
+        />
       ) : (
-        <ul className="space-y-4">
-          {invoices.map((invoice, idx) => (
-            <li key={`${invoice.invoice_number}-${idx}`} className="p-4 bg-white rounded-lg shadow">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium">Invoice: {invoice.invoice_number}</p>
-                  <p className="text-sm text-gray-600">Vendor: {invoice.vendor_name}</p>
-                  <p className="text-sm text-gray-600">Amount: £{invoice.total_amount.toFixed(2)}</p>
-                  <p className="text-sm text-gray-600">
-                    Confidence: {invoice.confidence !== undefined && invoice.confidence !== null
-                      ? `${(invoice.confidence * 100).toFixed(1)}%`
-                      : 'N/A'}
-                  </p>
-                  <p className="text-sm text-gray-600">Status: {invoice.status || 'Unknown'}</p>
+        <>
+          <ul className="space-y-4">
+            {reviewInvoices.map((invoice) => (
+              <li key={invoice.id} className="p-4 bg-white rounded-lg shadow">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="font-medium">Invoice: {invoice.invoice_number}</p>
+                    <p className="text-sm text-gray-600">Vendor: {invoice.vendor_name}</p>
+                    <p className="text-sm text-gray-600">Amount: £{invoice.total_amount.toFixed(2)}</p>
+                    <p className="text-sm text-gray-600">
+                      Confidence: {invoice.confidence !== undefined && invoice.confidence !== null
+                        ? `${(invoice.confidence * 100).toFixed(1)}%`
+                        : 'N/A'}
+                    </p>
+                    <p className="text-sm text-gray-600">Status: {invoice.status}</p>
+                    <button
+                      onClick={() => handleViewPdf(invoice.invoice_number)}
+                      className="mt-2 text-sm text-blue-600 hover:underline"
+                    >
+                      View PDF
+                    </button>
+                  </div>
                   <button
-                    onClick={() => {
-                      console.log('Button clicked for invoice:', invoice.invoice_number);
-                      handleViewPdf(invoice.invoice_number);
-                    }}
-                    className="mt-2 text-sm text-blue-600 hover:underline"
+                    onClick={() => setSelectedInvoice(invoice)}
+                    className="bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200"
                   >
-                    View PDF
+                    Edit
                   </button>
                 </div>
-                <button
-                  onClick={() => setSelectedInvoice(invoice)}
-                  className="bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200"
-                >
-                  Edit
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+
+          {invoiceData?.pagination && invoiceData.pagination.total_pages > 1 && (
+            <div className="mt-6 flex justify-center space-x-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <span className="px-3 py-1">
+                Page {currentPage} of {invoiceData.pagination.total_pages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(invoiceData.pagination.total_pages, p + 1))}
+                disabled={currentPage === invoiceData.pagination.total_pages}
+                className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
 }
 
-// New component for the form section using react-hook-form
+// Form section component
 function FormSection({ 
   selectedInvoice, 
   onSubmit, 
   setSelectedInvoice, 
-  loading 
+  isSubmitting 
 }: { 
   selectedInvoice: Invoice;
   onSubmit: (data: FormInputs) => Promise<void>;
   setSelectedInvoice: (inv: Invoice | null) => void;
-  loading: boolean;
+  isSubmitting: boolean;
 }) {
   const { register, handleSubmit, formState: { errors }, reset } = useForm<FormInputs>({
-    resolver: yupResolver(schema)
-  });
-
-  useEffect(() => {
-    if (selectedInvoice) {
-      reset({
-        ...selectedInvoice,
-        invoice_date: selectedInvoice.invoice_date // Keep as string, no Date conversion
-      });
+    resolver: yupResolver(schema),
+    defaultValues: {
+      vendor_name: selectedInvoice.vendor_name,
+      invoice_number: selectedInvoice.invoice_number,
+      invoice_date: selectedInvoice.invoice_date,
+      total_amount: selectedInvoice.total_amount
     }
-  }, [selectedInvoice, reset]);
+  });
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="bg-white p-6 rounded-lg shadow">
@@ -219,6 +230,7 @@ function FormSection({
             {...register('invoice_number')}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
           />
+          {errors.invoice_number && <p className="text-red-500 text-sm mt-1">{errors.invoice_number.message}</p>}
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Invoice Date</label>
@@ -227,6 +239,7 @@ function FormSection({
             {...register('invoice_date')}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
           />
+          {errors.invoice_date && <p className="text-red-500 text-sm mt-1">{errors.invoice_date.message}</p>}
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Total Amount</label>
@@ -241,10 +254,10 @@ function FormSection({
         <div className="flex space-x-3">
           <button
             type="submit"
-            disabled={loading}
+            disabled={isSubmitting}
             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-blue-300"
           >
-            {loading ? 'Saving...' : 'Save Changes'}
+            {isSubmitting ? 'Saving...' : 'Save Changes'}
           </button>
           <button
             type="button"
