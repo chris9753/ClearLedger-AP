@@ -3,7 +3,8 @@ import { toast } from 'react-hot-toast';
 import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { getInvoicePdf } from '../../lib/api';
+import { getInvoicePdf, getInvoices } from '../../lib/api';
+import { Invoice } from '../types';
 
 // Updated Yup schema to expect invoice_date as string
 const schema = yup.object().shape({
@@ -13,16 +14,6 @@ const schema = yup.object().shape({
   invoice_date: yup.string().required('Invoice date is required')
     .matches(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
 });
-
-interface Invoice {
-  invoice_number: string;
-  vendor_name: string;
-  total_amount: number;
-  validation_status: string;
-  invoice_date: string;
-  review_status?: string;
-  confidence?: number;
-}
 
 // Update FormInputs type to use string for invoice_date
 type FormInputs = {
@@ -75,11 +66,9 @@ export default function ReviewPage() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:8000/api/invoices');
-      if (!response.ok) throw new Error('Failed to fetch invoices');
-      const data = await response.json();
+      const fetchedInvoices = await getInvoices() as Invoice[];
       // Filter to only show invoices that need review
-      const reviewInvoices = data.filter((invoice: Invoice) => 
+      const reviewInvoices = fetchedInvoices.filter((invoice: Invoice) => 
         invoice.review_status === "needs_review" || 
         invoice.validation_status === "failed"
       );
@@ -110,7 +99,7 @@ export default function ReviewPage() {
         invoice_number: invoiceId
       };
 
-      const response = await fetch(`http://localhost:8000/api/invoices/${invoiceId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_MAIN_API_URL}/api/invoices/${invoiceId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formattedData),
