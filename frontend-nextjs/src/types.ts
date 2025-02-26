@@ -1,21 +1,39 @@
 export interface Invoice {
-    id?: number;  // Optional because not always present in extraction results
+    id: number;
     invoice_number: string;
     vendor_name: string;
+    invoice_date: string;  // Format: YYYY-MM-DD
     total_amount: number;
-    confidence?: number;  // Optional because only present in extraction results
-    invoice_date: string;
-    status: string;  // Current status from database
+    status: 'valid' | 'needs_review' | 'failed';
     pdf_url: string;
-    created_at?: string;  // Optional because not present in extraction results
+    created_at: string;  // ISO date string
+    confidence: number;  // Range 0-1
+    total_time?: number;  // Processing time in seconds
 }
 
-export interface UploadResponse {
-    status: string;
-    detail: string;
-    extracted_data?: Invoice;
-    pdf_url?: string;
-    type?: string;  // For error responses
+export interface ApiResponse<T> {
+    status: 'success' | 'error';
+    detail?: string;
+    data?: T;
+    message?: string;
+}
+
+export interface ProcessingStatus {
+    current: number;
+    total: number;
+    failed: number;
+    currentFile?: string;
+}
+
+export interface WebSocketMessage {
+    type: 'progress' | 'error' | 'complete' | 'status' | 'heartbeat';
+    message?: string;
+    current?: number;
+    total?: number;
+    failed?: number;
+    currentFile?: string;
+    file?: string;
+    error?: string;
 }
 
 export interface Anomaly {
