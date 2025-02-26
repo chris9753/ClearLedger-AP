@@ -361,6 +361,189 @@ class InvoiceDB:
             logger.error(f"Failed to update batch status: {e}")
             return False
 
+    @retry_on_error()
+    def get_invoice_count(self) -> int:
+        """Get total count of invoices in database."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT COUNT(*) FROM invoice_metadata")
+                return cursor.fetchone()[0]
+        except sqlite3.Error as e:
+            logger.error(f"Failed to get invoice count: {e}")
+            return 0
+
+    @retry_on_error()
+    def get_invoices_paginated(
+        self, 
+        page: int = 1, 
+        per_page: int = 10,
+        sort_by: str = "created_at",
+        order: str = "desc"
+    ) -> List[Dict[str, Any]]:
+        """Get paginated invoices with sorting."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Validate sort_by field to prevent SQL injection
+                allowed_fields = {
+                    'created_at', 'invoice_number', 'vendor_name', 
+                    'invoice_date', 'total_amount', 'status'
+                }
+                if sort_by not in allowed_fields:
+                    sort_by = 'created_at'
+                
+                # Validate order
+                order = order.lower()
+                if order not in ('asc', 'desc'):
+                    order = 'desc'
+                
+                offset = (page - 1) * per_page
+                
+                cursor.execute(f"""
+                    SELECT 
+                        id, invoice_number, vendor_name, invoice_date,
+                        total_amount, status, pdf_url, created_at,
+                        confidence, total_time
+                    FROM invoice_metadata
+                    ORDER BY {sort_by} {order}
+                    LIMIT ? OFFSET ?
+                """, (per_page, offset))
+                
+                rows = cursor.fetchall()
+                invoices = [dict(row) for row in rows] if rows else []
+                logger.info(f"Retrieved {len(invoices)} invoices for page {page}")
+                return invoices
+                
+        except sqlite3.Error as e:
+            logger.error(f"Failed to fetch paginated invoices: {e}")
+            return []
+
+    @retry_on_error()
+    def get_status_counts(self) -> dict:
+        """Get counts of invoices by status."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT status, COUNT(*) as count
+                    FROM invoice_metadata
+                    GROUP BY status
+                """)
+                return {row['status']: row['count'] for row in cursor.fetchall()}
+        except sqlite3.Error as e:
+            logger.error(f"Failed to get status counts: {e}")
+            return {}
+
+    @retry_on_error()
+    def get_confidence_metrics(self) -> dict:
+        """Get confidence score metrics."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT 
+                        AVG(confidence) as avg_confidence,
+                        MIN(confidence) as min_confidence,
+                        MAX(confidence) as max_confidence,
+                        COUNT(CASE WHEN confidence < 0.7 THEN 1 END) as low_confidence_count,
+                        COUNT(*) as total_count
+                    FROM invoice_metadata
+                """)
+                row = cursor.fetchone()
+                if row:
+                    return {
+                        "average": float(row['avg_confidence'] or 0),
+                        "minimum": float(row['min_confidence'] or 0),
+                        "maximum": float(row['max_confidence'] or 0),
+                        "low_confidence_rate": float(row['low_confidence_count'] or 0) / float(row['total_count'] or 1)
+                    }
+                return {"average": 0, "minimum": 0, "maximum": 0, "low_confidence_rate": 0}
+        except sqlite3.Error as e:
+            logger.error(f"Failed to get confidence metrics: {e}")
+            return {"average": 0, "minimum": 0, "maximum": 0, "low_confidence_rate": 0}
+
+    @retry_on_error()
+    def get_processing_time_metrics(self) -> dict:
+        """Get processing time metrics."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT 
+                        AVG(total_time) as avg_time,
+                        MIN(total_time) as min_time,
+                        MAX(total_time) as max_time,
+                        COUNT(*) as total_count
+                    FROM invoice_metadata
+                    WHERE total_time > 0
+                """)
+                row = cursor.fetchone()
+                if row:
+                    return {
+                        "average_seconds": float(row['avg_time'] or 0),
+                        "minimum_seconds": float(row['min_time'] or 0),
+                        "maximum_seconds": float(row['max_time'] or 0),
+                        "total_processed": row['total_count']
+                    }
+                return {
+                    "average_seconds": 0,
+                    "minimum_seconds": 0,
+                    "maximum_seconds": 0,
+                    "total_processed": 0
+                }
+        except sqlite3.Error as e:
+            logger.error(f"Failed to get processing time metrics: {e}")
+            return {
+                "average_seconds": 0,
+                "minimum_seconds": 0,
+                "maximum_seconds": 0,
+                "total_processed": 0
+            }
+
+    @retry_on_error()
+    def get_recent_metrics(self) -> dict:
+        """Get metrics for invoices processed in the last 24 hours."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT 
+                        COUNT(*) as total_count,
+                        COUNT(CASE WHEN confidence < 0.7 THEN 1 END) as low_confidence_count,
+                        COUNT(CASE WHEN status = 'valid' THEN 1 END) as valid_count,
+                        COUNT(CASE WHEN status = 'needs_review' THEN 1 END) as review_count,
+                        AVG(total_time) as avg_processing_time
+                    FROM invoice_metadata
+                    WHERE created_at >= datetime('now', '-1 day')
+                """)
+                row = cursor.fetchone()
+                if row:
+                    return {
+                        "processed_24h": row['total_count'],
+                        "low_confidence_24h": row['low_confidence_count'],
+                        "valid_24h": row['valid_count'],
+                        "needs_review_24h": row['review_count'],
+                        "avg_processing_time_24h": float(row['avg_processing_time'] or 0)
+                    }
+                return {
+                    "processed_24h": 0,
+                    "low_confidence_24h": 0,
+                    "valid_24h": 0,
+                    "needs_review_24h": 0,
+                    "avg_processing_time_24h": 0
+                }
+        except sqlite3.Error as e:
+            logger.error(f"Failed to get recent metrics: {e}")
+            return {
+                "processed_24h": 0,
+                "low_confidence_24h": 0,
+                "valid_24h": 0,
+                "needs_review_24h": 0,
+                "avg_processing_time_24h": 0
+            }
+
     def __del__(self):
         """Ensure proper cleanup of database connections."""
         logger.info("Cleaning up database connections")
