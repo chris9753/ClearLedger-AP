@@ -678,100 +678,148 @@ def load_json_file(filepath: Path) -> list:
 
 @app.get("/api/invoice_pdf/{invoice_number}")
 async def get_invoice_pdf(invoice_number: str):
-    """Get PDF for an invoice by streaming from S3."""
+    """Get PDF for an invoice by streaming efficiently from S3."""
     if not invoice_number:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invoice number is required"
         )
-    logger.debug(f"Looking for PDF for invoice_number: {invoice_number}")
+    logger.info(f"Looking for PDF for invoice_number: {invoice_number}")
     
     try:
         db = InvoiceDB()
-        # Query by invoice_number instead of id
-        query_result = db.get_all_invoices()
-        invoice = next((inv for inv in query_result if inv['invoice_number'] == invoice_number), None)
+        invoice = None
+        
+        # First try the direct invoice number lookup
+        invoice_data = db.get_invoice_by_number(invoice_number)
+        if invoice_data:
+            invoice = invoice_data
+        
+        # If not found, try to query from all invoices as fallback
+        if not invoice:
+            query_result = db.get_all_invoices()
+            invoice = next((inv for inv in query_result if inv['invoice_number'] == invoice_number), None)
         
         if not invoice:
+            logger.error(f"Invoice {invoice_number} not found in database")
             raise HTTPException(
                 status_code=404,
                 detail=f"Invoice {invoice_number} not found"
             )
         
-        if not invoice['pdf_url']:
+        if not invoice.get('pdf_url'):
+            logger.error(f"PDF URL missing for invoice {invoice_number}")
             raise HTTPException(
                 status_code=404,
                 detail=f"PDF URL not found for invoice {invoice_number}"
             )
         
-        # Rest of the function remains the same
+        pdf_url = invoice['pdf_url']
+        logger.info(f"Found PDF URL for invoice {invoice_number}: {pdf_url}")
+        
+        # Parse S3 URL more robustly
         try:
             from urllib.parse import urlparse
-            parsed_url = urlparse(invoice['pdf_url'])
-            path_parts = parsed_url.path.lstrip('/').split('/')
-            if len(path_parts) < 2:
-                raise ValueError("Invalid S3 URL format")
-            bucket_name = parsed_url.netloc.split('.')[0]
+            parsed_url = urlparse(pdf_url)
+            
+            # Handle the bucket name extraction more robustly
+            bucket_name = None
+            if parsed_url.netloc.endswith('s3.amazonaws.com'):
+                bucket_name = parsed_url.netloc.split('.')[0]
+            else:
+                # Handle custom domain or other URL formats
+                bucket_name = parsed_url.netloc.split('.')[0]
+            
+            # Extract the key more carefully
+            path_parts = parsed_url.path.strip('/').split('/')
+            if len(path_parts) < 1:
+                raise ValueError("Invalid S3 URL path")
+            
             s3_key = '/'.join(path_parts)
+            
+            logger.info(f"Parsed S3 URL - Bucket: {bucket_name}, Key: {s3_key}")
         except Exception as e:
-            logger.error(f"Error parsing S3 URL {invoice['pdf_url']}: {e}")
+            logger.error(f"Failed to parse S3 URL {pdf_url}: {str(e)}")
             raise HTTPException(
                 status_code=500,
                 detail=f"Invalid S3 URL format: {str(e)}"
             )
         
+        # Configure boto3 with timeouts
         try:
-            # Get the PDF from S3 with exponential backoff retry
-            s3_client = boto3.client('s3')
-            max_retries = 3
-            retry_delay = 1
+            import boto3
+            from botocore.config import Config
             
-            for attempt in range(max_retries):
-                try:
-                    response = s3_client.get_object(
-                        Bucket=bucket_name,
-                        Key=s3_key
-                    )
-                    break
-                except ClientError as s3_error:
-                    if attempt == max_retries - 1:
-                        raise
-                    error_code = s3_error.response['Error']['Code']
-                    if error_code in ['NoSuchKey', 'NoSuchBucket']:
-                        raise
-                    logger.warning(f"S3 get attempt {attempt + 1} failed, retrying in {retry_delay}s...")
-                    time.sleep(retry_delay)
-                    retry_delay *= 2
-            
-            return StreamingResponse(
-                response['Body'].iter_chunks(),
-                media_type="application/pdf",
-                headers={
-                    "Content-Disposition": f'inline; filename="{invoice["invoice_number"]}.pdf"',
-                    "Cache-Control": "no-cache",
-                    "X-Accel-Buffering": "no"  # Disable nginx buffering if using it
-                }
+            # Configure with explicit timeouts to prevent hanging requests
+            s3_config = Config(
+                connect_timeout=5,  # 5 seconds for connection timeout
+                read_timeout=20,    # 20 seconds for read timeout
+                retries={'max_attempts': 3}
             )
             
+            s3_client = boto3.client('s3', config=s3_config)
+            
+            try:
+                # Get the file metadata first to verify it exists
+                head_response = s3_client.head_object(
+                    Bucket=bucket_name,
+                    Key=s3_key
+                )
+                
+                # Check if it's a valid PDF by content type
+                content_type = head_response.get('ContentType', '')
+                if 'application/pdf' not in content_type and not content_type.startswith('binary/'):
+                    logger.warning(f"S3 object content type is not PDF: {content_type}")
+                    # Continue anyway, but log the warning
+                
+                file_size = head_response.get('ContentLength', 0)
+                logger.info(f"PDF file size: {file_size} bytes")
+                
+                # Get the PDF from S3
+                response = s3_client.get_object(
+                    Bucket=bucket_name,
+                    Key=s3_key
+                )
+                
+                return StreamingResponse(
+                    response['Body'].iter_chunks(chunk_size=8192),  # Use optimal chunk size
+                    media_type="application/pdf",
+                    headers={
+                        "Content-Disposition": f'inline; filename="{invoice_number}.pdf"',
+                        "Content-Length": str(file_size),
+                        "Cache-Control": "public, max-age=86400",  # Cache for 24 hours
+                        "X-Accel-Buffering": "no",  # Disable nginx buffering if using it
+                        "Access-Control-Allow-Origin": "*"  # Allow CORS for direct access testing
+                    }
+                )
+                
+            except ClientError as e:
+                error_code = e.response.get('Error', {}).get('Code', '')
+                
+                if error_code in ['NoSuchKey', 'NoSuchBucket', '404']:
+                    logger.error(f"PDF not found in S3: {bucket_name}/{s3_key}, Error: {error_code}")
+                    raise HTTPException(
+                        status_code=404,
+                        detail=f"PDF not found in S3 for invoice {invoice_number}"
+                    )
+                else:
+                    logger.error(f"S3 error retrieving PDF: {str(e)}")
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Failed to retrieve PDF from S3: {str(e)}"
+                    )
+            
         except ClientError as e:
-            error_code = e.response['Error']['Code']
-            if error_code in ['NoSuchKey', 'NoSuchBucket']:
-                logger.error(f"PDF not found in S3: {bucket_name}/{s3_key}")
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"PDF not found in S3 for invoice {invoice_number}"
-                )
-            else:
-                logger.error(f"S3 error retrieving PDF for invoice {invoice_number}: {str(e)}")
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Failed to retrieve PDF from S3: {str(e)}"
-                )
+            logger.error(f"S3 client error for PDF {invoice_number}: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"S3 error: {str(e)}"
+            )
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error retrieving PDF for invoice {invoice_number}: {str(e)}")
+        logger.error(f"Unexpected error retrieving PDF for invoice {invoice_number}: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"Error retrieving PDF: {str(e)}"
