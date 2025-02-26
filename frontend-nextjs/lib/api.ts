@@ -94,27 +94,62 @@ export async function getInvoices(
 }
 
 export async function getInvoicePdf(invoiceId: string): Promise<Blob> {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_MAIN_API_URL}/api/invoice_pdf/${invoiceId}`);
+    // Create an AbortController to manage request timeouts
+    const controller = new AbortController();
+    const signal = controller.signal;
     
-    if (!response.ok) {
+    // Set a timeout to abort the request if it takes too long
+    const timeoutId = setTimeout(() => {
+        controller.abort();
+    }, 30000); // 30-second timeout
+    
+    try {
+        const response = await fetch(
+            `${process.env.NEXT_PUBLIC_MAIN_API_URL}/api/invoice_pdf/${invoiceId}`,
+            { signal }
+        );
+        
+        // Clear the timeout since the request completed
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+            const contentType = response.headers.get('Content-Type');
+            if (contentType?.includes('application/json')) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'Failed to retrieve PDF');
+            }
+            if (response.status === 404) {
+                throw new Error('PDF not found for this invoice');
+            }
+            throw new Error(`Failed to retrieve PDF (HTTP ${response.status})`);
+        }
+        
+        // Verify we got a PDF
         const contentType = response.headers.get('Content-Type');
-        if (contentType?.includes('application/json')) {
-            const errorData = await response.json();
-            throw new Error(errorData.detail || 'Failed to retrieve PDF');
+        if (!contentType?.includes('application/pdf')) {
+            throw new Error('Invalid response: not a PDF');
         }
-        if (response.status === 404) {
-            throw new Error('PDF not found for this invoice');
+        
+        const blob = await response.blob();
+        
+        // Validate blob size
+        if (blob.size === 0) {
+            throw new Error('Received empty PDF file');
         }
-        throw new Error('Failed to retrieve PDF');
+        
+        return blob;
+    } catch (error) {
+        // Clean up the timeout if there was an error
+        clearTimeout(timeoutId);
+        
+        // Handle aborted requests specifically
+        if (error instanceof DOMException && error.name === 'AbortError') {
+            throw new Error('PDF request timed out');
+        }
+        
+        // Re-throw the error to be handled by the caller
+        throw error;
     }
-    
-    // Verify we got a PDF
-    const contentType = response.headers.get('Content-Type');
-    if (!contentType?.includes('application/pdf')) {
-        throw new Error('Invalid response: not a PDF');
-    }
-    
-    return response.blob();
 }
 
 export async function updateInvoiceStatus(
