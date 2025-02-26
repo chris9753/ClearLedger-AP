@@ -45,7 +45,7 @@ class InvoiceDB:
         """Initialize the database and create tables if they don't exist."""
         logger.debug(f"Attempting to connect to {self.db_path}")
         try:
-            with sqlite3.connect(str(self.db_path)) as conn:
+            with self.get_connection() as conn:
                 logger.debug("Connected to database")
                 cursor = conn.cursor()
                 cursor.execute("""
@@ -57,9 +57,23 @@ class InvoiceDB:
                         total_amount REAL NOT NULL,
                         status TEXT NOT NULL,
                         pdf_url TEXT NOT NULL,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        confidence REAL DEFAULT 0.0,
+                        total_time REAL DEFAULT 0.0
                     )
                 """)
+
+                # Add new columns if they don't exist
+                try:
+                    cursor.execute("ALTER TABLE invoice_metadata ADD COLUMN confidence REAL DEFAULT 0.0")
+                except sqlite3.OperationalError:
+                    logger.debug("confidence column already exists")
+
+                try:
+                    cursor.execute("ALTER TABLE invoice_metadata ADD COLUMN total_time REAL DEFAULT 0.0")
+                except sqlite3.OperationalError:
+                    logger.debug("total_time column already exists")
+
                 conn.commit()
                 logger.info("Database initialized successfully")
         except sqlite3.Error as e:
@@ -77,20 +91,22 @@ class InvoiceDB:
             raise ValueError(f"Missing required fields: {missing}")
 
         try:
-            with sqlite3.connect(str(self.db_path)) as conn:
+            with self.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
                     INSERT INTO invoice_metadata (
                         invoice_number, vendor_name, invoice_date,
-                        total_amount, status, pdf_url
-                    ) VALUES (?, ?, ?, ?, ?, ?)
+                        total_amount, status, pdf_url, confidence, total_time
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     invoice_data['invoice_number'],
                     invoice_data['vendor_name'],
                     invoice_data['invoice_date'],
                     invoice_data['total_amount'],
                     invoice_data['status'],
-                    invoice_data['pdf_url']
+                    invoice_data['pdf_url'],
+                    invoice_data.get('confidence', 0.0),
+                    invoice_data.get('total_time', 0.0)
                 ))
                 conn.commit()
                 logger.info(f"Invoice {invoice_data['invoice_number']} inserted successfully")
@@ -107,12 +123,13 @@ class InvoiceDB:
         """Retrieve all invoices from the database."""
         logger.debug("Fetching all invoices from database")
         try:
-            with self.get_connection() as conn:  # Using the context manager
+            with self.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
                     SELECT 
                         id, invoice_number, vendor_name, invoice_date,
-                        total_amount, status, pdf_url, created_at
+                        total_amount, status, pdf_url, created_at,
+                        confidence, total_time
                     FROM invoice_metadata
                     ORDER BY created_at DESC
                 """)
