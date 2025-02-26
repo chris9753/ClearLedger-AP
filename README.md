@@ -166,12 +166,11 @@ A sophisticated invoice processing system that leverages LangChain's multi-agent
 #### Day 7 and 8: Implemented SQLite and AWS (S3) Database
 
 - 🎯 **Objectives Achieved**
-  - Stabilized backend operations
-  - Resolved frontend compatibility issues
-  - Fixed critical bugs in processing pipeline
-  - Resolved batch processing stalls
-  - Restored PDF viewing functionality
-  - Fixed infinite loading issues
+  - Migrated from JSON storage to SQLite database for improved scalability
+  - Implemented AWS S3 integration for PDF storage
+  - Created migration script to handle data transition
+  - Enhanced system reliability and performance
+  - Optimized WebSocket connection stability
 
 ## Migration Challenges and Solutions
 
@@ -284,7 +283,7 @@ clear_ledger_nextjs/
     ├── orchestrator.py  
 ```
 
-### Architecture Diagram (both project variants; different reps)
+### Architecture Diagram 
 
 ```plaintext
 +-------------------+
@@ -396,7 +395,7 @@ flowchart TD
 - Virtual environment tool
 - Git
 - OpenAI API key
-- Sample data files
+- AWS account with S3 access
 
 ### Step-by-Step Installation
 
@@ -408,21 +407,30 @@ flowchart TD
    ```bash
    git clone https://github.com/yourusername/clear_ledger_nextjs.git
    cd clear_ledger_nextjs
+   ```
 
-2. **Build & Run with Docker**
+2. **Create an environment file**:
    ```bash
-   # Create .env file in root directory
-   echo "OPENAI_API_KEY=your_api_key_here" > .env
+   # Create .env file in root directory with required credentials
+   cat > .env << EOL
+   OPENAI_API_KEY=your_api_key_here
+   AWS_ACCESS_KEY_ID=your_access_key
+   AWS_SECRET_ACCESS_KEY=your_secret_key
+   BUCKET_NAME=your_bucket_name
+   EOL
+   ```
 
+3. **Build & Run with Docker**
+   ```bash
    # Build and run with Docker Compose
    docker compose up --build -d
    ```
 
-3. **Access the Application**
+4. **Access the Application**
    - Frontend: http://localhost:3000
    - Backend: http://localhost:8000/docs
 
-4. **Using Pre-built Images** (Optional)
+5. **Using Pre-built Images** (Optional)
    ```bash
    # Pull images from Docker Hub
    docker pull chris9753/clear_ledger_nextjs_backend:latest
@@ -441,8 +449,12 @@ flowchart TD
          - "8000:8000"
        environment:
          - OPENAI_API_KEY=${OPENAI_API_KEY}
+         - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+         - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+         - BUCKET_NAME=${BUCKET_NAME}
        volumes:
          - ./data:/app/data
+         - ./invoices.db:/app/invoices.db
 
      frontend:
        image: chris9753/clear_ledger_nextjs_frontend:latest
@@ -459,6 +471,8 @@ This project uses GitHub Actions to automatically build and push Docker images t
 Pre-built images are available at:
 - Backend: `chris9753/clear_ledger_nextjs_backend:latest`
 - Frontend: `chris9753/clear_ledger_nextjs_frontend:latest`
+
+The CI/CD pipeline has been updated to include proper handling of SQLite databases and AWS S3 configurations.
 
 ### Core Workflows
 
@@ -518,19 +532,33 @@ The project has migrated from JSON-based storage to SQLite and AWS S3 for improv
 
 1. **Database Setup**
    ```bash
-   # Place invoices.db in project root
-   python migrate_json_to_db.py  # Migrates data from structured_invoices.json
+   # Place invoices.db in project root (if not using the migration script)
+   python migrate_json_to_db.py  # Migrates data from structured_invoices.json if needed
    ```
 
 2. **AWS S3 Configuration**
-   - Create a public S3 bucket
+   - Create an S3 bucket for PDF storage
    - Set environment variables in `.env`:
      ```
      AWS_ACCESS_KEY_ID=your_access_key
      AWS_SECRET_ACCESS_KEY=your_secret_key
      BUCKET_NAME=your_bucket_name
      ```
-   - Ensure bucket has public read access
+   - Configure bucket policy for public read access:
+     ```json
+     {
+       "Version": "2012-10-17",
+       "Statement": [
+         {
+           "Sid": "PublicReadGetObject",
+           "Effect": "Allow",
+           "Principal": "*",
+           "Action": "s3:GetObject",
+           "Resource": "arn:aws:s3:::your-bucket-name/*"
+         }
+       ]
+     }
+     ```
 
 3. **Install Dependencies**
    ```bash
@@ -549,7 +577,10 @@ The project has migrated from JSON-based storage to SQLite and AWS S3 for improv
 
 5. **Post-Migration**
    - Archive `data/processed/structured_invoices.json` after successful migration
-   - Verify data in SQLite database
-   - Test S3 file uploads
+   - Verify data in SQLite database using SQLite browser or CLI:
+     ```bash
+     sqlite3 invoices.db "SELECT COUNT(*) FROM invoices"
+     ```
+   - Test S3 file uploads and access using the web interface
 
 **Built with ❤️ for the Technical Challenge**
