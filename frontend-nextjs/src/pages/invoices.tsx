@@ -9,20 +9,24 @@ const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000;
 
 export default function InvoicesPage() {
+    const [currentPage, setCurrentPage] = useState(1);
+    const [sortBy, setSortBy] = useState('created_at');
+    const [order, setOrder] = useState('desc');
+    const perPage = 10;
     const [error, setError] = useState<string | null>(null);
     const retryCount = useRef(0);
     const isMounted = useRef(true);
 
     const { 
-        data: invoices = [] as Invoice[], // Add explicit type here
-        isLoading, 
+        data: invoiceData,
+        isLoading,
         isError,
         error: queryError,
         isSuccess,
         refetch
     } = useQuery({
-        queryKey: ['invoices'],
-        queryFn: getInvoices,
+        queryKey: ['invoices', currentPage, sortBy, order],
+        queryFn: () => getInvoices(currentPage, perPage, sortBy, order),
         retry: MAX_RETRIES - 1,
         retryDelay: (attempt) => RETRY_DELAY * (attempt + 1),
         staleTime: 30000, // Consider data fresh for 30 seconds
@@ -95,10 +99,19 @@ export default function InvoicesPage() {
         }
     };
 
-    // Sort invoices by created_at (newest first)
-    const sortedInvoices = (invoices ?? []).sort((a, b) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
+    const handleSort = (column: string) => {
+        if (sortBy === column) {
+            setOrder(order === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(column);
+            setOrder('desc');
+        }
+    };
+
+    const renderSortArrow = (column: string) => {
+        if (sortBy !== column) return null;
+        return order === 'asc' ? ' ↑' : ' ↓';
+    };
 
     return (
         <div className="max-w-7xl mx-auto py-6">
@@ -143,7 +156,7 @@ export default function InvoicesPage() {
                 </div>
             )}
 
-            {!isLoading && sortedInvoices.length === 0 && (
+            {!isLoading && invoiceData?.data.length === 0 && (
                 <div className="text-center py-8">
                     <p className="text-gray-500 mb-4">No invoices found.</p>
                     <Link
@@ -155,23 +168,60 @@ export default function InvoicesPage() {
                 </div>
             )}
 
-            {sortedInvoices.length > 0 && (
+            {invoiceData?.data.length > 0 && (
                 <div className="overflow-x-auto shadow-md rounded-lg">
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Number</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Confidence</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                <th 
+                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                                    onClick={() => handleSort('id')}
+                                >
+                                    ID{renderSortArrow('id')}
+                                </th>
+                                <th 
+                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                                    onClick={() => handleSort('vendor_name')}
+                                >
+                                    Vendor{renderSortArrow('vendor_name')}
+                                </th>
+                                <th 
+                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                                    onClick={() => handleSort('invoice_number')}
+                                >
+                                    Invoice Number{renderSortArrow('invoice_number')}
+                                </th>
+                                <th 
+                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                                    onClick={() => handleSort('invoice_date')}
+                                >
+                                    Date{renderSortArrow('invoice_date')}
+                                </th>
+                                <th 
+                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                                    onClick={() => handleSort('total_amount')}
+                                >
+                                    Total{renderSortArrow('total_amount')}
+                                </th>
+                                <th 
+                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                                    onClick={() => handleSort('confidence')}
+                                >
+                                    Confidence{renderSortArrow('confidence')}
+                                </th>
+                                <th 
+                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                                    onClick={() => handleSort('status')}
+                                >
+                                    Status{renderSortArrow('status')}
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Actions
+                                </th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {sortedInvoices.map((invoice) => (
+                            {invoiceData?.data.map((invoice) => (
                                 <tr key={invoice.id} className="hover:bg-gray-50">
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{invoice.id}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{invoice.vendor_name}</td>
@@ -203,6 +253,28 @@ export default function InvoicesPage() {
                             ))}
                         </tbody>
                     </table>
+                </div>
+            )}
+
+            {invoiceData?.pagination && invoiceData.pagination.total_pages > 1 && (
+                <div className="mt-6 flex justify-center space-x-2">
+                    <button
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+                    >
+                        Previous
+                    </button>
+                    <span className="px-3 py-1">
+                        Page {currentPage} of {invoiceData.pagination.total_pages}
+                    </span>
+                    <button
+                        onClick={() => setCurrentPage(p => Math.min(invoiceData.pagination.total_pages, p + 1))}
+                        disabled={currentPage === invoiceData.pagination.total_pages}
+                        className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+                    >
+                        Next
+                    </button>
                 </div>
             )}
         </div>
