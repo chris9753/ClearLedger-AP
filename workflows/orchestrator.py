@@ -13,6 +13,8 @@ from agents.extractor_agent import InvoiceExtractionAgent
 from agents.validator_agent import InvoiceValidationAgent
 from agents.matching_agent import PurchaseOrderMatchingAgent
 from agents.human_review_agent import HumanReviewAgent
+from db import InvoiceDB  # Import the InvoiceDB class
+from setup_s3 import upload_to_s3  # Import the S3 upload function
 
 # Constants
 PROCESSED_DIR = Path("data/processed")
@@ -27,6 +29,7 @@ class InvoiceProcessingWorkflow:
         self.validation_agent = InvoiceValidationAgent()
         self.matching_agent = PurchaseOrderMatchingAgent()
         self.review_agent = HumanReviewAgent()
+        self.db = InvoiceDB()  # Initialize database connection
         # Create necessary directories
         PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
         TEMP_DIR.mkdir(parents=True, exist_ok=True)
@@ -61,6 +64,7 @@ class InvoiceProcessingWorkflow:
         validation_time = None
         matching_time = None
         review_time = None
+        pdf_url = None
 
         try:
             monitoring.start_timer("extraction")
@@ -225,11 +229,36 @@ class InvoiceProcessingWorkflow:
         }
         self._save_invoice_entry(invoice_entry)
 
-        # Save the PDF only if save_pdf is True
-        if save_pdf and extracted_dict.get('invoice_number'):
-            pdf_path = PROCESSED_DIR / f"{extracted_dict['invoice_number']}.pdf"
-            shutil.copy2(document_path, pdf_path)
-            logger.info(f"Saved PDF for invoice {extracted_dict['invoice_number']} to {pdf_path}")
+        # Save the PDF and upload to S3
+        try:
+            if save_pdf and extracted_dict.get('invoice_number'):
+                pdf_path = PROCESSED_DIR / f"{extracted_dict['invoice_number']}.pdf"
+                shutil.copy2(document_path, pdf_path)
+                logger.info(f"Saved PDF for invoice {extracted_dict['invoice_number']} to {pdf_path}")
+                
+                # Upload to S3
+                logger.info(f"Uploading invoice {extracted_dict['invoice_number']} to S3")
+                pdf_url = upload_to_s3(str(pdf_path))
+                logger.info(f"Successfully uploaded to S3: {pdf_url}")
+                
+                # Save to database
+                db_entry = {
+                    'invoice_number': extracted_dict['invoice_number'],
+                    'vendor_name': extracted_dict['vendor_name'],
+                    'invoice_date': extracted_dict['invoice_date'],
+                    'total_amount': float(extracted_dict['total_amount']),
+                    'status': review_result["status"],
+                    'pdf_url': pdf_url
+                }
+                
+                try:
+                    invoice_id = self.db.insert_invoice(db_entry)
+                    logger.info(f"Invoice {extracted_dict['invoice_number']} inserted into database with ID {invoice_id}")
+                except Exception as db_error:
+                    logger.error(f"Failed to insert invoice into database: {str(db_error)}")
+        except Exception as s3_error:
+            logger.error(f"Failed during S3 upload or database insertion: {str(s3_error)}")
+            pdf_url = None
 
         result = {
             "extracted_data": extracted_dict,
@@ -240,7 +269,8 @@ class InvoiceProcessingWorkflow:
             "validation_time": validation_time,
             "matching_time": matching_time,
             "review_time": review_time,
-            "total_time": total_time
+            "total_time": total_time,
+            "pdf_url": pdf_url  # Include the S3 URL in the result
         }
         logger.info(f"Invoice processing completed: {document_path}")
         logger.debug(f"Final result: {result}")
