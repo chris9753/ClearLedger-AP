@@ -1,6 +1,6 @@
 import sqlite3
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 from contextlib import contextmanager
 import time
 from functools import wraps
@@ -81,15 +81,58 @@ class InvoiceDB:
             raise
 
     @retry_on_error()
-    def insert_invoice(self, invoice_data: Dict[str, Any]) -> int:
-        logger.debug(f"Inserting invoice: {invoice_data}")
+    def get_invoice_by_number(self, invoice_number: str) -> Optional[Dict[str, Any]]:
+        """Retrieve a single invoice by its invoice_number."""
+        logger.debug(f"Fetching invoice with number: {invoice_number}")
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT 
+                        id, invoice_number, vendor_name, invoice_date,
+                        total_amount, status, pdf_url, created_at,
+                        confidence, total_time
+                    FROM invoice_metadata
+                    WHERE invoice_number = ?
+                """, (invoice_number,))
+                row = cursor.fetchone()
+                if row:
+                    return dict(row)
+                return None
+        except sqlite3.Error as e:
+            logger.error(f"Failed to fetch invoice {invoice_number}: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error fetching invoice {invoice_number}: {e}")
+            return None
+
+    @retry_on_error()
+    def insert_invoice(self, invoice_data: Dict[str, Any]) -> Tuple[bool, int, Optional[str]]:
+        """
+        Insert or update an invoice in the database.
+        
+        Returns:
+            Tuple containing (is_new: bool, invoice_id: int, error_message: Optional[str])
+            is_new: True if inserted as new, False if existing record was found
+            invoice_id: ID of the inserted/updated invoice
+            error_message: Error message if there was a problem, None otherwise
+        """
+        logger.debug(f"Inserting/updating invoice: {invoice_data}")
         required_fields = {
             'invoice_number', 'vendor_name', 'invoice_date',
             'total_amount', 'status', 'pdf_url'
         }
         if missing := required_fields - set(invoice_data.keys()):
-            raise ValueError(f"Missing required fields: {missing}")
-
+            error_msg = f"Missing required fields: {missing}"
+            logger.error(error_msg)
+            return False, -1, error_msg
+            
+        # Check if invoice already exists
+        existing_invoice = self.get_invoice_by_number(invoice_data['invoice_number'])
+        if existing_invoice:
+            logger.info(f"Invoice {invoice_data['invoice_number']} already exists, returning existing ID")
+            return False, existing_invoice['id'], "Invoice already exists"
+            
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
@@ -110,13 +153,15 @@ class InvoiceDB:
                 ))
                 conn.commit()
                 logger.info(f"Invoice {invoice_data['invoice_number']} inserted successfully")
-                return cursor.lastrowid
+                return True, cursor.lastrowid, None
         except sqlite3.IntegrityError as e:
-            logger.error(f"Duplicate invoice number: {invoice_data['invoice_number']}")
-            raise
+            error_msg = f"Duplicate invoice number: {invoice_data['invoice_number']}"
+            logger.error(error_msg)
+            return False, -1, error_msg
         except sqlite3.Error as e:
-            logger.error(f"Failed to insert invoice: {e}")
-            raise
+            error_msg = f"Failed to insert invoice: {e}"
+            logger.error(error_msg)
+            return False, -1, error_msg
 
     @retry_on_error()
     def get_all_invoices(self) -> List[Dict[str, Any]]:
@@ -228,6 +273,93 @@ class InvoiceDB:
         except sqlite3.Error as e:
             logger.error(f"Failed to delete invoice {invoice_id}: {e}")
             raise
+
+    @retry_on_error()
+    def batch_check_duplicates(self, invoice_numbers: List[str]) -> Dict[str, bool]:
+        """Check multiple invoice numbers for duplicates efficiently."""
+        logger.debug(f"Checking duplicates for {len(invoice_numbers)} invoices")
+        result = {}
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                placeholders = ','.join('?' * len(invoice_numbers))
+                cursor.execute(f"""
+                    SELECT invoice_number
+                    FROM invoice_metadata
+                    WHERE invoice_number IN ({placeholders})
+                """, invoice_numbers)
+                existing = {row[0] for row in cursor.fetchall()}
+                result = {num: num in existing for num in invoice_numbers}
+                return result
+        except sqlite3.Error as e:
+            logger.error(f"Failed to check duplicates: {e}")
+            return {num: False for num in invoice_numbers}
+
+    @retry_on_error()
+    def batch_insert_invoices(self, invoices: List[Dict[str, Any]]) -> List[Tuple[bool, int, Optional[str]]]:
+        """
+        Insert multiple invoices efficiently.
+        Returns a list of (is_new, invoice_id, error_message) tuples.
+        """
+        logger.debug(f"Attempting batch insert of {len(invoices)} invoices")
+        results = []
+        
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                for invoice in invoices:
+                    try:
+                        cursor.execute("""
+                            INSERT INTO invoice_metadata (
+                                invoice_number, vendor_name, invoice_date,
+                                total_amount, status, pdf_url, confidence, total_time
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (
+                            invoice['invoice_number'],
+                            invoice['vendor_name'],
+                            invoice['invoice_date'],
+                            invoice['total_amount'],
+                            invoice['status'],
+                            invoice['pdf_url'],
+                            invoice.get('confidence', 0.0),
+                            invoice.get('total_time', 0.0)
+                        ))
+                        results.append((True, cursor.lastrowid, None))
+                    except sqlite3.IntegrityError as e:
+                        if "UNIQUE constraint failed" in str(e):
+                            results.append((False, -1, f"Invoice {invoice['invoice_number']} already exists"))
+                        else:
+                            results.append((False, -1, str(e)))
+                    except Exception as e:
+                        results.append((False, -1, str(e)))
+                
+                conn.commit()
+                return results
+                
+        except sqlite3.Error as e:
+            logger.error(f"Batch insert failed: {e}")
+            # Return failure for all remaining invoices
+            remaining = len(invoices) - len(results)
+            results.extend([(False, -1, str(e))] * remaining)
+            return results
+
+    @retry_on_error()
+    def update_batch_status(self, invoice_ids: List[int], new_status: str) -> bool:
+        """Update status for multiple invoices at once."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                placeholders = ','.join('?' * len(invoice_ids))
+                cursor.execute(f"""
+                    UPDATE invoice_metadata
+                    SET status = ?
+                    WHERE id IN ({placeholders})
+                """, [new_status] + invoice_ids)
+                conn.commit()
+                return cursor.rowcount > 0
+        except sqlite3.Error as e:
+            logger.error(f"Failed to update batch status: {e}")
+            return False
 
     def __del__(self):
         """Ensure proper cleanup of database connections."""
