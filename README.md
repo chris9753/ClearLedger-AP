@@ -179,10 +179,12 @@ GitHub Actions deploys the frontend to **Vercel** on push to `main` (see `.githu
 | `VERCEL_ORG_ID` | Team/user ID from Vercel project settings |
 | `VERCEL_PROJECT_ID` | Project ID from Vercel project settings |
 
-**Vercel project setup:**
+**Vercel project setup (required):**
 
-1. Import the repo in Vercel and set **Root Directory** to `frontend-nextjs`.
-2. Add `NEXT_PUBLIC_MAIN_API_URL` under **Environment Variables** (Production) pointing at your deployed backend API.
+1. Import the repo in Vercel.
+2. **Settings → General → Root Directory** → set to `frontend-nextjs` → Save.  
+   Without this, Vercel builds from the repo root, detects `api/app.py`, and fails with a FastAPI entrypoint error.
+3. Add `NEXT_PUBLIC_MAIN_API_URL` under **Environment Variables** (Production) pointing at your deployed backend API.
 
 You can also connect the repo directly in Vercel for automatic deploys; the GitHub Action is useful if you want deploys gated on CI or triggered manually.
 
