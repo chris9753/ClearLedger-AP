@@ -17,7 +17,13 @@ from models.invoice import InvoiceData
 from decimal import Decimal
 
 load_dotenv()  # Load environment variables from .env
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+
+def _get_openai_client() -> OpenAI:
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY is not set")
+    return OpenAI(api_key=api_key)
 
 class InvoiceExtractionTool:
     """A simple tool to extract structured invoice data as a fallback."""
@@ -64,8 +70,11 @@ class InvoiceExtractionAgent(BaseAgent):
             logger.warning(f"Invoice similar to known error: {rag_result['matched_invoice_id']}")
 
         try:
+            if not os.getenv("OPENAI_API_KEY"):
+                raise ValueError("OPENAI_API_KEY is not set")
+
             # Use OpenAI API to extract fields
-            response = client.chat.completions.create(
+            response = _get_openai_client().chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "Extract the following fields from the invoice text and return them in JSON format: vendor_name, invoice_number, invoice_date, total_amount. Ensure total_amount is a numeric string without currency symbols."},

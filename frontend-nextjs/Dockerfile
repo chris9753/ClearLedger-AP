@@ -12,7 +12,7 @@ RUN npm install
 COPY . .
 
 # API URL is baked in at build time (override in CI via build-arg)
-ARG NEXT_PUBLIC_MAIN_API_URL=https://clearledger-ap.onrender.com
+ARG NEXT_PUBLIC_MAIN_API_URL=https://clearledger-ap-production.up.railway.app
 ENV NEXT_PUBLIC_MAIN_API_URL=$NEXT_PUBLIC_MAIN_API_URL
 
 # Build the Next.js app

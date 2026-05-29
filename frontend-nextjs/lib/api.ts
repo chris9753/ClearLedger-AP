@@ -1,6 +1,6 @@
 import { Invoice, Anomaly } from '../src/types';
 
-const DEFAULT_API_URL = 'https://clearledger-ap.onrender.com';
+const DEFAULT_API_URL = 'https://clearledger-ap-production.up.railway.app';
 
 export function getApiBaseUrl(): string {
     return process.env.NEXT_PUBLIC_MAIN_API_URL || DEFAULT_API_URL;

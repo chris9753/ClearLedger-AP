@@ -201,11 +201,11 @@ The API is a **Docker** service (see `backend/Dockerfile` and `backend/start.sh`
 2. **Root directory:** leave empty (repo root). Do not set `frontend-nextjs`.
 3. Railway reads `railway.toml` (Dockerfile `backend/Dockerfile`, health check `/health`).
 4. **Settings → Networking → Generate Domain** and copy the public URL.
-5. **Variables** (service → Variables):
+5. **Variables** (backend **service** → Variables — required before the app will stay up):
 
 | Variable | Example / notes |
 |----------|-----------------|
-| `OPENAI_API_KEY` | Secret |
+| `OPENAI_API_KEY` | **Required.** Your OpenAI API key (`sk-...`). Without it the container crashes on startup. |
 | `AWS_ACCESS_KEY_ID` | Secret |
 | `AWS_SECRET_ACCESS_KEY` | Secret |
 | `S3_BUCKET_NAME` | Your bucket |
@@ -271,7 +271,7 @@ Render injects `PORT` automatically; the container entrypoint reads it via `back
 
 In **Vercel → Project → Environment Variables** (Production):
 
-- `NEXT_PUBLIC_MAIN_API_URL` = your backend URL (no trailing slash), e.g. `https://clearledger-ap.onrender.com` or `https://<service>.up.railway.app`
+- `NEXT_PUBLIC_MAIN_API_URL` = your backend URL (no trailing slash), e.g. `https://clearledger-ap-production.up.railway.app`
 
 Redeploy the frontend after changing this variable (or rely on the default in `frontend-nextjs/next.config.js` after a new build).
 
