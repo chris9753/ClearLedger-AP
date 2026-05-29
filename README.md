@@ -54,7 +54,7 @@ Next.js UI (3000)  -->  FastAPI API + WebSockets (8000)  -->  Agent orchestrator
 | Backend | FastAPI, Uvicorn, WebSockets |
 | Agents | LangChain workflow: extraction, validation, PO match, human review, FAISS fallback |
 | Storage | SQLite metadata, S3 object storage for originals |
-| Deploy | Docker Compose, Render (API), Vercel (frontend) |
+| Deploy | Docker Compose, Render or Railway (API), Vercel (frontend) |
 
 ### Agent pipeline
 
@@ -191,9 +191,44 @@ GitHub Actions deploys the frontend to **Vercel** on push to `main` (see `.githu
 
 You can also connect the repo directly in Vercel for automatic deploys; the GitHub Action is useful if you want deploys gated on CI or triggered manually.
 
-## Backend deploy (Render)
+## Backend deploy
 
-The API runs as a **Docker web service** on [Render](https://render.com). Use the included `render.yaml` blueprint or create the service manually with the same settings.
+The API is a **Docker** service (see `backend/Dockerfile` and `backend/start.sh`). Deploy to [Render](https://render.com) or [Railway](https://railway.com).
+
+### Railway
+
+1. [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub repo** → select this repository.
+2. **Root directory:** leave empty (repo root). Do not set `frontend-nextjs`.
+3. Railway reads `railway.toml` (Dockerfile `backend/Dockerfile`, health check `/health`).
+4. **Settings → Networking → Generate Domain** and copy the public URL.
+5. **Variables** (service → Variables):
+
+| Variable | Example / notes |
+|----------|-----------------|
+| `OPENAI_API_KEY` | Secret |
+| `AWS_ACCESS_KEY_ID` | Secret |
+| `AWS_SECRET_ACCESS_KEY` | Secret |
+| `S3_BUCKET_NAME` | Your bucket |
+| `AWS_DEFAULT_REGION` | `us-east-1` |
+| `CORS_ORIGINS` | `https://your-app.vercel.app` |
+
+Optional persistence (recommended):
+
+1. Service → **Volumes** → **Add Volume** → mount path `/app/data`
+2. Either rely on auto paths (`RAILWAY_VOLUME_MOUNT_PATH` → `invoices.db` and `data/` under the volume), or set explicitly:
+   - `DATABASE_PATH` = `/app/data/invoices.db`
+   - `DATA_DIR` = `/app/data/data`
+
+Railway sets `PORT` automatically; `backend/start.sh` binds to it.
+
+**Start command:** leave empty (uses Docker `CMD` → `backend/start.sh`).  
+**Do not override** with a custom start command unless you use the same uvicorn line.
+
+API docs: `https://<your-service>.up.railway.app/docs`
+
+### Render
+
+Use the included `render.yaml` blueprint or create the service manually with the same settings.
 
 ### Option A — Blueprint (recommended)
 
@@ -236,16 +271,15 @@ Render injects `PORT` automatically; the container entrypoint reads it via `back
 
 In **Vercel → Project → Environment Variables** (Production):
 
-- `NEXT_PUBLIC_MAIN_API_URL` = your Render service URL (no trailing slash), e.g. `https://clearledger-api.onrender.com`
+- `NEXT_PUBLIC_MAIN_API_URL` = your backend URL (no trailing slash), e.g. `https://clearledger-ap.onrender.com` or `https://<service>.up.railway.app`
 
-Redeploy the frontend after changing this variable.
+Redeploy the frontend after changing this variable (or rely on the default in `frontend-nextjs/next.config.js` after a new build).
 
 ### Notes
 
-- **Persistent disk** on Render keeps SQLite and local `data/` across restarts; it requires a paid instance type. Without a disk, the database resets on each deploy.
-- **Cold starts** on free/starter tiers can take 30–60+ seconds; the first request after idle may be slow.
+- **Persistent storage:** use a Render disk (`/var/data`) or a Railway volume (`/app/data`). Without it, SQLite resets on redeploy.
+- **Cold starts** on free/low tiers can take 30–60+ seconds after idle.
 - **WebSockets** (batch upload progress) work over `wss://` when the API is served over HTTPS.
-- API docs: `https://<your-service>.onrender.com/docs`
 
 ## License
 

@@ -104,9 +104,19 @@ async def health():
     return {"status": "ok"}
 
 
+def _resolve_data_dir() -> Path:
+    data_dir = os.getenv("DATA_DIR")
+    if data_dir:
+        return Path(data_dir)
+    volume = os.getenv("RAILWAY_VOLUME_MOUNT_PATH")
+    if volume:
+        return Path(volume) / "data"
+    return Path("data")
+
+
 # File storage configuration
 class StorageConfig:
-    BASE_DIR = Path(os.getenv("DATA_DIR", "data"))
+    BASE_DIR = _resolve_data_dir()
     RAW_DIR = BASE_DIR / "raw" / "invoices"
     PROCESSED_DIR = BASE_DIR / "processed"
     TEMP_DIR = BASE_DIR / "temp"

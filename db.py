@@ -27,14 +27,23 @@ def retry_on_error(max_attempts: int = 3, delay: float = 0.1):
         return wrapper
     return decorator
 
+def _resolve_db_path() -> Path:
+    db_path = os.getenv("DATABASE_PATH")
+    if db_path:
+        path = Path(db_path)
+    else:
+        volume = os.getenv("RAILWAY_VOLUME_MOUNT_PATH")
+        if volume:
+            path = Path(volume) / "invoices.db"
+        else:
+            path = Path(__file__).parent / "invoices.db"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 class InvoiceDB:
     def __init__(self):
-        db_path = os.getenv("DATABASE_PATH")
-        if db_path:
-            self.db_path = Path(db_path)
-            self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        else:
-            self.db_path = Path(__file__).parent / "invoices.db"
+        self.db_path = _resolve_db_path()
         self._init_db()
 
     @contextmanager

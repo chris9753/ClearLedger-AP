@@ -1,0 +1,25 @@
+# Railway config: https://docs.railway.com/config-as-code/reference
+# Connect repo → New Service → deploy from GitHub (repo root, not frontend-nextjs)
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "backend/Dockerfile"
+watchPatterns = [
+  "api/**",
+  "agents/**",
+  "backend/**",
+  "config/**",
+  "data_processing/**",
+  "workflows/**",
+  "models/**",
+  "requirements.txt",
+  "db.py",
+  "setup_s3.py",
+  "setup_db.py",
+  "migrate_json_to_db.py",
+]
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
