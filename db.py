@@ -1,3 +1,4 @@
+import os
 import sqlite3
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
@@ -28,7 +29,12 @@ def retry_on_error(max_attempts: int = 3, delay: float = 0.1):
 
 class InvoiceDB:
     def __init__(self):
-        self.db_path = Path(__file__).parent / "invoices.db"
+        db_path = os.getenv("DATABASE_PATH")
+        if db_path:
+            self.db_path = Path(db_path)
+            self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        else:
+            self.db_path = Path(__file__).parent / "invoices.db"
         self._init_db()
 
     @contextmanager

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { uploadInvoice } from "../../lib/api";
+import { uploadInvoice, getWebSocketUrl } from "../../lib/api";
 import { toast } from "react-hot-toast";
 import PageHeader from "../components/PageHeader";
 import PipelineFlow from "../components/PipelineFlow";
@@ -82,7 +82,7 @@ export default function UploadPage() {
       if (ws?.readyState === WebSocket.OPEN) ws.close();
 
       try {
-        ws = new WebSocket("ws://localhost:8000/ws/process_progress");
+        ws = new WebSocket(getWebSocketUrl("/ws/process_progress"));
 
         ws.onopen = () => {
           setWsState((prev) => ({

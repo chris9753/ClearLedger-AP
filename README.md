@@ -54,7 +54,7 @@ Next.js UI (3000)  -->  FastAPI API + WebSockets (8000)  -->  Agent orchestrator
 | Backend | FastAPI, Uvicorn, WebSockets |
 | Agents | LangChain workflow: extraction, validation, PO match, human review, FAISS fallback |
 | Storage | SQLite metadata, S3 object storage for originals |
-| Deploy | Docker Compose, optional pre-built images on Docker Hub |
+| Deploy | Docker Compose, Render (API), Vercel (frontend) |
 
 ### Agent pipeline
 
@@ -190,6 +190,62 @@ GitHub Actions deploys the frontend to **Vercel** on push to `main` (see `.githu
 **CI workflow:** Runs `vercel pull`, `vercel build`, and `vercel deploy --prebuilt` from the repo root. Vercel applies the Root Directory setting automatically.
 
 You can also connect the repo directly in Vercel for automatic deploys; the GitHub Action is useful if you want deploys gated on CI or triggered manually.
+
+## Backend deploy (Render)
+
+The API runs as a **Docker web service** on [Render](https://render.com). Use the included `render.yaml` blueprint or create the service manually with the same settings.
+
+### Option A — Blueprint (recommended)
+
+1. Push this repo to GitHub (if not already).
+2. In Render: **New → Blueprint** → connect the repo → apply `render.yaml`.
+3. When prompted, set secret environment variables:
+   - `OPENAI_API_KEY`
+   - `AWS_ACCESS_KEY_ID`
+   - `AWS_SECRET_ACCESS_KEY`
+   - `S3_BUCKET_NAME` (your S3 bucket name)
+   - `CORS_ORIGINS` — your Vercel frontend URL(s), comma-separated, e.g. `https://your-app.vercel.app`
+4. After deploy, copy the service URL (e.g. `https://clearledger-api.onrender.com`).
+
+### Option B — Manual web service
+
+| Setting | Value |
+|---------|--------|
+| Runtime | Docker |
+| Dockerfile path | `backend/Dockerfile` |
+| Docker context | Repository root (`.`) |
+| Health check path | `/health` |
+| Disk (paid plans) | Mount `/var/data`, 1 GB |
+
+**Environment variables:**
+
+| Variable | Example / notes |
+|----------|-----------------|
+| `DATABASE_PATH` | `/var/data/invoices.db` (with persistent disk) |
+| `DATA_DIR` | `/var/data/data` |
+| `AWS_DEFAULT_REGION` | `us-east-1` |
+| `OPENAI_API_KEY` | Secret |
+| `AWS_ACCESS_KEY_ID` | Secret |
+| `AWS_SECRET_ACCESS_KEY` | Secret |
+| `S3_BUCKET_NAME` | Your bucket |
+| `CORS_ORIGINS` | `https://your-app.vercel.app` |
+
+Render injects `PORT` automatically; the container entrypoint reads it via `backend/start.sh`.
+
+### Wire up the frontend
+
+In **Vercel → Project → Environment Variables** (Production):
+
+- `NEXT_PUBLIC_MAIN_API_URL` = your Render service URL (no trailing slash), e.g. `https://clearledger-api.onrender.com`
+
+Redeploy the frontend after changing this variable.
+
+### Notes
+
+- **Persistent disk** on Render keeps SQLite and local `data/` across restarts; it requires a paid instance type. Without a disk, the database resets on each deploy.
+- **Cold starts** on free/starter tiers can take 30–60+ seconds; the first request after idle may be slow.
+- **WebSockets** (batch upload progress) work over `wss://` when the API is served over HTTPS.
+- API docs: `https://<your-service>.onrender.com/docs`
 
 ## License
 

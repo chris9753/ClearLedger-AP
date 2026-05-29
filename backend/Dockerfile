@@ -17,6 +17,8 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
+RUN chmod +x backend/start.sh
+
 EXPOSE 8000
 
-CMD ["uvicorn", "api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["backend/start.sh"]

@@ -85,18 +85,28 @@ class ConnectionManager:
 # Initialize connection manager
 manager = ConnectionManager()
 
-# CORS middleware configuration
+# CORS middleware configuration (comma-separated origins in CORS_ORIGINS)
+_cors_origins = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:3000,https://localhost:3000",
+)
+allow_origins = [origin.strip() for origin in _cors_origins.split(",") if origin.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"]
+    allow_headers=["*"],
 )
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
 
 # File storage configuration
 class StorageConfig:
-    BASE_DIR = Path("data")
+    BASE_DIR = Path(os.getenv("DATA_DIR", "data"))
     RAW_DIR = BASE_DIR / "raw" / "invoices"
     PROCESSED_DIR = BASE_DIR / "processed"
     TEMP_DIR = BASE_DIR / "temp"

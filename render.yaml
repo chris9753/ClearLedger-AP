@@ -1,0 +1,32 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+# Deploy: connect this repo in Render → New → Blueprint → select render.yaml
+services:
+  - type: web
+    name: clearledger-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    plan: starter
+    region: oregon
+    healthCheckPath: /health
+    disk:
+      name: clearledger-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: DATABASE_PATH
+        value: /var/data/invoices.db
+      - key: DATA_DIR
+        value: /var/data/data
+      - key: AWS_DEFAULT_REGION
+        value: us-east-1
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: S3_BUCKET_NAME
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

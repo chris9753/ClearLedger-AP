@@ -1,5 +1,21 @@
 import { Invoice, Anomaly } from '../src/types';
 
+const DEFAULT_API_URL = 'http://localhost:8000';
+
+export function getApiBaseUrl(): string {
+    return process.env.NEXT_PUBLIC_MAIN_API_URL || DEFAULT_API_URL;
+}
+
+export function getWebSocketUrl(path: string): string {
+    const base = getApiBaseUrl();
+    const url = new URL(base);
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    url.pathname = path.startsWith('/') ? path : `/${path}`;
+    url.search = '';
+    url.hash = '';
+    return url.toString();
+}
+
 interface ApiError {
     detail?: string;
     message?: string;
