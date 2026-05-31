@@ -89,7 +89,7 @@ manager = ConnectionManager()
 _cors_origins = os.getenv(
     "CORS_ORIGINS",
     "http://localhost:3000,https://localhost:3000,"
-    "https://clear-ledger-ap-fe.vercel.app",
+    "https://clear-ledger-ap.vercel.app",
 )
 allow_origins = [origin.strip() for origin in _cors_origins.split(",") if origin.strip()]
 app.add_middleware(

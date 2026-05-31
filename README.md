@@ -210,7 +210,7 @@ The API is a **Docker** service (see `backend/Dockerfile` and `backend/start.sh`
 | `AWS_SECRET_ACCESS_KEY` | Secret |
 | `S3_BUCKET_NAME` | Your bucket |
 | `AWS_DEFAULT_REGION` | `us-east-1` |
-| `CORS_ORIGINS` | `https://clear-ledger-ap-fe.vercel.app` (comma-separate multiple origins) |
+| `CORS_ORIGINS` | `https://clear-ledger-ap.vercel.app` (comma-separate multiple origins) |
 
 Optional persistence (recommended):
 
@@ -263,7 +263,7 @@ Use the included `render.yaml` blueprint or create the service manually with the
 | `AWS_ACCESS_KEY_ID` | Secret |
 | `AWS_SECRET_ACCESS_KEY` | Secret |
 | `S3_BUCKET_NAME` | Your bucket |
-| `CORS_ORIGINS` | `https://clear-ledger-ap-fe.vercel.app` (comma-separate multiple origins) |
+| `CORS_ORIGINS` | `https://clear-ledger-ap.vercel.app` (comma-separate multiple origins) |
 
 Render injects `PORT` automatically; the container entrypoint reads it via `backend/start.sh`.
 
